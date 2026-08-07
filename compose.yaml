@@ -1,0 +1,62 @@
+name: receipt
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: receipt
+      POSTGRES_PASSWORD: receipt
+      POSTGRES_DB: receipt
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U receipt -d receipt"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Emulador local de Azure Blob Storage. El contenedor de recibos es privado
+  # (§3.3): ninguna liga pública apunta nunca directo al blob.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: azurite-blob --blobHost 0.0.0.0 --location /data
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite_data:/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      target: runtime
+      args:
+        INSTALL_DEV: "true"
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy
+    command: >
+      uvicorn receipt.main:app --host 0.0.0.0 --port 8000
+      --reload --reload-dir /app/src
+
+volumes:
+  db_data:
+  azurite_data:

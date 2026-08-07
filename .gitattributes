@@ -1,0 +1,8 @@
+# El repositorio guarda LF siempre. CI y las imágenes de Docker corren en Linux;
+# un CRLF filtrado rompe scripts de shell y ensucia los diffs.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ico binary

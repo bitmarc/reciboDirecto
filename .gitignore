@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.env
+.env.local
+
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Datos locales de Azurite si se monta fuera de un volumen nombrado
+__azurite_db*__.json
+__blobstorage__/

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Panel — Recibo{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h1>Hola, {{ account.display_name }}</h1>
+
+  {# El panel real llega en el hito 5. Hasta entonces esta pantalla solo
+     confirma que la sesión funciona: el producto se valida por la pantalla de
+     cobro, no por el panel (§15). #}
+  <p class="muted">
+    El panel de ingresos llega en el hito 5. Por ahora, el flujo que importa es
+    el de cobro.
+  </p>
+
+  <a class="button button--primary" href="/cobrar">Cobrar</a>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Recibo{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% if is_authenticated %}
+  <nav class="nav">
+    <a class="nav__brand" href="/">Recibo</a>
+    <div class="nav__links">
+      <a href="/cobrar">Cobrar</a>
+      <a href="/recibos">Recibos</a>
+      <a href="/clientes">Clientes</a>
+      <a href="/trabajos">Trabajos</a>
+      <a href="/ajustes">Ajustes</a>
+      <form method="post" action="/auth/logout" class="nav__logout">
+        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+        <button type="submit" class="link-button">Salir</button>
+      </form>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="main">
+    {% if error %}<p class="alert alert--error">{{ error }}</p>{% endif %}
+    {% if notice %}<p class="alert alert--notice">{{ notice }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

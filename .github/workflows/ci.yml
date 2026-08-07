@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, tipado y pruebas
+    runs-on: ubuntu-latest
+
+    # Todo corre dentro de la misma imagen que se despliega. Instalar las
+    # nativas de WeasyPrint en el runner daría una versión de Pango distinta a
+    # la de producción, y el render del recibo dejaría de ser comparable.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar el entorno
+        # .env no está versionado (contiene el secreto de sesión). Para CI
+        # bastan los valores de ejemplo, que apuntan al Postgres del compose.
+        run: cp .env.example .env
+
+      - name: Construir la imagen
+        run: docker compose build app
+
+      - name: Levantar PostgreSQL
+        run: |
+          docker compose up -d db
+          timeout 60 sh -c 'until docker compose exec -T db pg_isready -U receipt -d receipt; do sleep 2; done'
+
+      - name: Lint
+        run: docker compose run --rm --no-deps app ruff check .
+
+      - name: Formato
+        run: docker compose run --rm --no-deps app ruff format --check .
+
+      - name: Tipado
+        run: docker compose run --rm --no-deps app mypy src/receipt
+
+      - name: Pruebas
+        run: docker compose run --rm app pytest
+
+      - name: Las migraciones revierten y se vuelven a aplicar
+        # Un downgrade roto se descubre el día que hay que revertir un
+        # despliegue, que es el peor día para descubrirlo.
+        run: |
+          docker compose run --rm app alembic upgrade head
+          docker compose run --rm app alembic downgrade base
+          docker compose run --rm app alembic upgrade head
+
+      - name: No quedan migraciones sin generar
+        # Si un modelo cambió y nadie generó su migración, `alembic check`
+        # detecta la diferencia y falla aquí y no en el despliegue.
+        run: docker compose run --rm app alembic check
+
+      - name: Registro de la aplicación en caso de fallo
+        if: failure()
+        run: docker compose logs --no-color
