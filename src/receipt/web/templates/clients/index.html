@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Clientes — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Clientes</h1>
+  <a class="button button--primary button--inline" href="/clientes/nuevo">Nuevo cliente</a>
+</div>
+
+<section class="card">
+  {# El buscador va por HTMX porque es el mismo widget que el bloque 1 de la
+     pantalla de cobro (§7.2), donde no puede haber recargas. El parcial que
+     devuelve `/clientes/buscar` se reutiliza allí tal cual. #}
+  <label for="q">Buscar por nombre o teléfono</label>
+  <input id="q" name="q" type="search" value="{{ q }}" autocomplete="off"
+         placeholder="Ana Ramírez o 5512345678"
+         hx-get="/clientes/buscar"
+         hx-trigger="input changed delay:250ms, search"
+         hx-target="#client-results"
+         hx-include="#archivados"
+         hx-indicator="#search-indicator">
+
+  <label class="checkbox">
+    <input id="archivados" name="archivados" type="checkbox" value="true"
+           {% if archivados %}checked{% endif %}
+           hx-get="/clientes/buscar"
+           hx-trigger="change"
+           hx-target="#client-results"
+           hx-include="#q">
+    Mostrar archivados
+  </label>
+
+  <span id="search-indicator" class="htmx-indicator muted">Buscando…</span>
+</section>
+
+<div id="client-results">
+  {% include "clients/_results.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/htmx.min.js"></script>
+{% endblock %}

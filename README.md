@@ -62,10 +62,14 @@ src/receipt/
   models/        Tablas de SQLAlchemy.
   repositories/  Acceso a datos acotado por cuenta.
   services/      Casos de uso. Dueños de la transacción.
-  security/      Argon2id, sesiones, CSRF, cabeceras.
+  security/      Argon2id, sesiones, CSRF, cabeceras, límite de intentos.
   web/           Rutas delgadas, plantillas Jinja2, estáticos.
-  infra/         Blob Storage, PDF, correo.
+  infra/         Blob Storage, correo y, desde el hito 3, PDF.
 ```
+
+`signature_pad` y `htmx` están vendorizados en `web/static/js/` con la versión
+fijada en un comentario. No es preferencia: la CSP es `script-src 'self'`, y un
+CDN en la CSP es un tercero con permiso de ejecutar código sobre datos de cobro.
 
 `domain/` es puro a propósito: las reglas de negocio se prueban en milisegundos
 y sin base de datos, que es lo que hace viable tener una prueba por cada `RN` y
@@ -84,7 +88,14 @@ cada `AC`.
 4. **Toda consulta se acota por cuenta.** `AccountScope` recibe el `account_id`
    de la sesión y ninguna ruta acepta uno por parámetro. Un modelo sin regla de
    alcance registrada no se puede consultar: falla al construir la query, no en
-   producción.
+   producción. Una prueba recorre `app.routes` y comprueba que cada recurso con
+   ID responde 404 a una cuenta ajena, así que cada ruta nueva queda cubierta
+   sola.
+5. **Los blobs se versionan; nunca se sobrescriben.** Cada captura de firma o
+   logo escribe una ruta nueva. El snapshot guarda *rutas*, no bytes: pisar un
+   blob cambiaría la firma de todos los recibos ya emitidos sin tocar una fila
+   de la base de datos, y `AC-02` fallaría por una vía que ninguna prueba de
+   base de datos detecta. Los blobs huérfanos son correctos y esperados.
 
 ### Decisiones que conviene conocer antes de tocar el código
 
@@ -99,6 +110,23 @@ cada `AC`.
   porque §0 exige que todo lo visible al usuario esté en español de México. La
   superficie en inglés de §6 del PRD queda como alias de redirección.
 - **Los identificadores de código van en inglés**; el copy, en español (§16).
+- **La búsqueda de clientes ignora acentos** vía `translate`, no vía la extensión
+  `unaccent`: cubre el alfabeto español —todo lo que la v1 necesita— sin obligar
+  a habilitar una extensión en Azure. Nadie escribe "Ramírez" con tilde en el
+  celular estando de pie en una puerta.
+- **La versión de la API de Azure Storage está fijada** (`infra/blob.py`). El SDK
+  usa por omisión la más reciente y Azurite va por detrás; sin fijarla, cada
+  actualización del SDK rompe el entorno local con un error que no dice nada.
+- **`domain/images.py` fuerza `LOAD_TRUNCATED_IMAGES = False` durante la
+  validación.** WeasyPrint lo pone en `True` al importarse; sin aislarlo, una
+  firma a medias se aceptaría en silencio rellenada con lo que Pillow alcance a
+  decodificar.
+
+### Correo en desarrollo
+
+`MAIL_BACKEND=console` escribe el correo al log en lugar de enviarlo. La liga de
+recuperación aparece en `docker compose logs -f app`. El proveedor real se
+enchufa al desplegar, que es cuando el hito 4 también necesitará enviar recibos.
 
 ---
 
@@ -107,7 +135,7 @@ cada `AC`.
 | Hito | Alcance | Estado |
 |---|---|---|
 | 0 | Cimientos: Docker, esquema completo, migraciones, autenticación, CI | **Terminado** — `AC-01` pasa |
-| 1 | Perfil del emisor, firma, directorio de clientes | Pendiente |
+| 1 | Perfil del emisor, firma, logo, clientes, recuperación de contraseña | **Terminado** — media parte de `AC-02`; barrido de `AC-13` en marcha |
 | 2 | Motor de cobro: servicios, pagos, recibos, snapshot, folios, cancelación | Pendiente |
 | 3 | Plantilla del recibo, PDF, liga pública, firma del cliente | Pendiente |
 | 4 | Pantalla de cobro e idempotencia, compartir | Pendiente |
@@ -124,6 +152,7 @@ veces al mes.
 |---|---|---|
 | §14.1 | Firma de un tercero | **Resuelta**: se captura nombre y calidad de quien firma |
 | §14.4 | Frontend | **Resuelta**: Jinja2 + HTMX + Alpine, server-rendered |
+| RN-20 | "Firma capturada una sola vez" | **Resuelta**: se puede recapturar; "una sola vez" se opone a "cada vez que emites", no a "para siempre" |
 | §14.2 | Gracia tras borrado de cuenta | Abierta. Bloquea la publicación de términos, no el desarrollo |
 | §14.5 | Mercado Pago vs. Stripe | Abierta. Se decide al empezar el hito 6 |
 

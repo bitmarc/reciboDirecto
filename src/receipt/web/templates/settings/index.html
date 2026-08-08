@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Ajustes — Recibo{% endblock %}
+
+{% block content %}
+<h1>Ajustes</h1>
+
+{# ---------------------------------------------------------------- Perfil #}
+<section class="card">
+  <h2>Tus datos</h2>
+  <p class="muted">Así apareces como emisor en cada recibo.</p>
+
+  <form method="post" action="/ajustes">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+
+    <label for="display_name">Tu nombre o el de tu negocio</label>
+    <input id="display_name" name="display_name" value="{{ account.display_name }}" required>
+
+    <label for="occupation">Oficio <span class="muted">(opcional)</span></label>
+    <input id="occupation" name="occupation" value="{{ account.occupation or '' }}"
+           placeholder="Electricista — instalaciones residenciales">
+
+    <label for="phone">Teléfono</label>
+    <input id="phone" name="phone" type="tel" inputmode="tel" value="{{ account.phone }}" required>
+
+    <label for="default_city">Ciudad</label>
+    <input id="default_city" name="default_city" value="{{ account.default_city }}" required>
+
+    <button type="submit" class="button button--primary">Guardar datos</button>
+  </form>
+</section>
+
+{# ----------------------------------------------------------------- Firma #}
+<section class="card">
+  <h2>Tu firma</h2>
+  <p class="muted">
+    Se estampa sola en todos tus recibos. No te la vamos a pedir al cobrar.
+  </p>
+
+  {% if account.signature_blob_path %}
+    <figure class="signature-preview">
+      {# El parámetro rompe la caché del navegador cuando se recaptura: la ruta
+         es estable pero la imagen cambia. #}
+      <img src="/ajustes/firma.png?v={{ account.updated_at.timestamp() | int }}"
+           alt="Tu firma registrada">
+      <figcaption class="muted">Firma actual</figcaption>
+    </figure>
+  {% endif %}
+
+  <form method="post" action="/ajustes/firma" id="signature-form">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <input type="hidden" name="signature_data" id="signature-data">
+
+    <div class="signature-pad">
+      <canvas id="signature-canvas" aria-label="Área para dibujar tu firma"></canvas>
+    </div>
+
+    <div class="button-row">
+      <button type="button" class="button button--secondary" id="signature-clear">
+        Borrar
+      </button>
+      <button type="submit" class="button button--primary" id="signature-save" disabled>
+        {% if account.signature_blob_path %}Reemplazar firma{% else %}Guardar firma{% endif %}
+      </button>
+    </div>
+  </form>
+</section>
+
+{# ------------------------------------------------------------------ Logo #}
+<section class="card">
+  <h2>Logo</h2>
+
+  {% if can_use_logo %}
+    {% if account.logo_blob_path %}
+      <figure class="logo-preview">
+        <img src="/ajustes/logo.png?v={{ account.updated_at.timestamp() | int }}"
+             alt="Logo de tu negocio">
+      </figure>
+      <form method="post" action="/ajustes/logo/quitar">
+        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+        <button type="submit" class="button button--secondary">Quitar logo</button>
+      </form>
+    {% endif %}
+
+    <form method="post" action="/ajustes/logo" enctype="multipart/form-data">
+      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+      <label for="logo">Imagen PNG o JPG</label>
+      <input id="logo" name="logo" type="file" accept="image/png,image/jpeg" required>
+      <button type="submit" class="button button--primary">Subir logo</button>
+    </form>
+  {% else %}
+    <p class="muted">
+      El logo aparece en la cabecera de tus recibos. Está disponible en el plan de
+      pago.
+    </p>
+  {% endif %}
+</section>
+
+{# --------------------------------------------------------------- Cuenta #}
+<section class="card">
+  <h2>Tu cuenta</h2>
+  <dl class="facts">
+    <dt>Correo</dt>
+    <dd>
+      {{ user.email }}
+      {% if user.email_verified_at %}
+        <span class="tag tag--ok">confirmado</span>
+      {% else %}
+        <span class="tag">sin confirmar</span>
+      {% endif %}
+    </dd>
+    <dt>Plan</dt>
+    <dd>{% if account.plan.value == 'paid' %}De pago{% else %}Gratuito{% endif %}</dd>
+  </dl>
+
+  {% if not user.email_verified_at %}
+    <form method="post" action="/ajustes/verificar-correo">
+      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+      <button type="submit" class="link-button">Reenviar la liga de confirmación</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/signature_pad.umd.min.js"></script>
+<script src="/static/js/signature.js"></script>
+{% endblock %}

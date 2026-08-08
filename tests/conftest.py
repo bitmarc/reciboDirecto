@@ -2,7 +2,9 @@
 
 Las pruebas corren contra PostgreSQL real, no sobre un motor embebido. No es una
 preferencia: AC-01 exige que la inmutabilidad falle también por SQL directo, y
-eso lo sostiene un trigger que solo existe en PostgreSQL.
+eso lo sostiene un trigger que solo existe en PostgreSQL. Los blobs van contra
+Azurite real por la misma razón: lo que hay que probar del hito 1 es que la
+subida sin sobrescritura funciona, y un doble en memoria probaría el doble.
 
 Dos decisiones que evitan el fallo clásico de "Future attached to a different
 loop":
@@ -22,6 +24,7 @@ import os
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncEngine,
@@ -29,6 +32,13 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
+
+# --------------------------------------------------------------------------
+# El entorno se fija ANTES de importar la aplicación: `receipt.config` se lee al
+# construir los ajustes, y `web.dependencies` arma el limitador de intentos en
+# tiempo de importación. Invertir el orden dejaría valores de producción dentro
+# de la suite.
+# --------------------------------------------------------------------------
 
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("SESSION_SECRET", "secreto-solo-para-pruebas")
@@ -44,6 +54,20 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://receipt:receipt@db:5432/receipt_test",
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+# Contenedor aparte, para que la suite no ensucie los blobs de desarrollo.
+os.environ["BLOB_CONTAINER"] = "receipts-test"
+os.environ["MAIL_BACKEND"] = "memory"
+
+from receipt.db import get_db_session  # noqa: E402
+from receipt.infra.blob import BlobStore, get_blob_store, reset_blob_store  # noqa: E402
+from receipt.infra.mail import RecordingMailer, get_mailer, set_mailer  # noqa: E402
+from receipt.main import create_app  # noqa: E402
+from receipt.web.dependencies import auth_limiter  # noqa: E402
+
+# --------------------------------------------------------------------------
+# Base de datos
+# --------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="session")
@@ -99,3 +123,93 @@ async def db(connection: AsyncConnection) -> AsyncIterator[AsyncSession]:
         join_transaction_mode="create_savepoint",
     ) as session:
         yield session
+
+
+# --------------------------------------------------------------------------
+# Infraestructura y aplicación
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def blobs() -> Iterator[BlobStore]:
+    reset_blob_store()
+    yield get_blob_store()
+    reset_blob_store()
+
+
+@pytest.fixture
+def mailer() -> Iterator[RecordingMailer]:
+    """Buzón en memoria: deja leer la liga que se le habría enviado al usuario."""
+    recorder = RecordingMailer()
+    set_mailer(recorder)
+    yield recorder
+    set_mailer(None)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> Iterator[None]:
+    """El limitador es estado global del proceso.
+
+    Sin limpiarlo, unas pruebas de login harían fallar a las siguientes por
+    haber agotado el cupo.
+    """
+    auth_limiter.clear()
+    yield
+    auth_limiter.clear()
+
+
+@pytest.fixture
+async def client(
+    db: AsyncSession, blobs: BlobStore, mailer: RecordingMailer
+) -> AsyncIterator[AsyncClient]:
+    """Cliente HTTP sobre la app, compartiendo la transacción de la prueba."""
+    app = create_app()
+    app.dependency_overrides[get_db_session] = lambda: db
+    app.dependency_overrides[get_blob_store] = lambda: blobs
+    app.dependency_overrides[get_mailer] = lambda: mailer
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+        yield http
+    app.dependency_overrides.clear()
+
+
+REGISTRATION = {
+    "email": "electricista@example.mx",
+    "password": "contrasena-larga",
+    "display_name": "Juan Pérez",
+    "phone": "5512345678",
+    "default_city": "Ciudad de México",
+    "occupation": "Electricista",
+}
+
+
+async def register_through_app(http: AsyncClient, **overrides: str) -> None:
+    """Da de alta una cuenta por la vía real y deja la sesión iniciada."""
+    response = await http.post(
+        "/auth/register", data=REGISTRATION | overrides, follow_redirects=False
+    )
+    assert response.status_code == 303, response.text
+
+
+@pytest.fixture
+async def signed_in(client: AsyncClient) -> AsyncClient:
+    await register_through_app(client)
+    return client
+
+
+def visible_text(response: object) -> str:
+    """HTML con los espacios normalizados.
+
+    El ajuste de línea de una plantilla parte frases a mitad, así que buscar una
+    subcadena en el HTML crudo falla por motivos que no tienen que ver con lo que
+    se está probando.
+    """
+    return " ".join(response.text.split())  # type: ignore[attr-defined]
+
+
+def csrf_token_of(http: AsyncClient) -> str:
+    """Token CSRF de la sesión activa, para los POST de las pruebas."""
+    from receipt.security.sessions import SessionData, _serializer
+
+    raw = http.cookies.get("receipt_session")
+    assert raw, "no hay sesión iniciada"
+    return SessionData.from_payload(_serializer().loads(raw)).csrf_token

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Nueva contraseña — Recibo{% endblock %}
+
+{% block content %}
+<section class="card card--narrow">
+  <h1>Elige una contraseña nueva</h1>
+
+  {% if expired or not token %}
+    <p class="muted">
+      Las ligas de recuperación sirven una sola vez y vencen en una hora.
+    </p>
+    <a class="button button--primary" href="/recuperar">Pedir una liga nueva</a>
+  {% else %}
+    <form method="post" action="/auth/reset-password">
+      <input type="hidden" name="token" value="{{ token }}">
+
+      <label for="password">Contraseña nueva</label>
+      <input id="password" name="password" type="password" required minlength="8"
+             autofocus autocomplete="new-password">
+      <p class="muted">Mínimo 8 caracteres.</p>
+
+      <button type="submit" class="button button--primary">Cambiar contraseña</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}

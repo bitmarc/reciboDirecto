@@ -1,0 +1,27 @@
+{# Parcial del buscador de clientes.
+   Se usa en `/clientes` y, desde el hito 4, en el bloque 1 de `/cobrar`.
+   No extiende `base.html`: HTMX lo inyecta suelto. #}
+
+{% if clients %}
+  <ul class="list">
+    {% for client in clients %}
+      <li class="list__item {% if client.archived_at %}list__item--muted{% endif %}">
+        <a href="/clientes/{{ client.id }}">
+          <span class="list__title">{{ client.full_name }}</span>
+          <span class="list__meta">{{ client.phone }}</span>
+          {% if client.archived_at %}<span class="tag">archivado</span>{% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% elif q %}
+  <p class="empty">
+    Nadie coincide con «{{ q }}».
+    <a href="/clientes/nuevo">Dar de alta un cliente</a>
+  </p>
+{% else %}
+  <p class="empty">
+    Todavía no tienes clientes.
+    <a href="/clientes/nuevo">Da de alta al primero</a>
+  </p>
+{% endif %}

@@ -143,3 +143,111 @@ button:focus-visible, a:focus-visible {
 
 .alert--error { background: var(--danger-bg); color: var(--danger); }
 .alert--notice { background: var(--notice-bg); color: var(--accent); }
+
+/* Encabezado de página con acción --------------------------------------- */
+
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-head h1 { margin-bottom: 0.5rem; }
+
+.button--inline { width: auto; margin-top: 0; }
+
+.button-row { display: flex; gap: 0.75rem; }
+.button-row .button { flex: 1; }
+
+/* Listas y fichas -------------------------------------------------------- */
+
+.list { list-style: none; margin: 0; padding: 0; }
+
+.list__item { border-bottom: 1px solid var(--line); }
+.list__item:last-child { border-bottom: 0; }
+.list__item--muted { opacity: 0.6; }
+
+.list__item a {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  min-height: var(--tap);
+  padding: 0.75rem 1.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.list__item a:hover { background: var(--bg); }
+.list__title { font-weight: 600; }
+.list__meta { color: var(--ink-soft); font-size: 0.9375rem; }
+
+.card > .list { margin: 0 -1.25rem -1.25rem; }
+
+.empty {
+  padding: 1.5rem 1.25rem;
+  color: var(--ink-soft);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.facts { margin: 0; }
+.facts dt {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  margin-top: 0.875rem;
+}
+.facts dd { margin: 0.125rem 0 0; }
+
+.tag {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.tag--ok { background: var(--notice-bg); color: var(--accent); border-color: transparent; }
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+  min-height: var(--tap);
+}
+
+.checkbox input { width: auto; min-height: 0; }
+
+/* Firma y logo ----------------------------------------------------------- */
+
+/* El canvas no se rellena de blanco: la firma se exporta con fondo
+   transparente para estamparse sobre el recibo. El cuadro con fondo claro es
+   solo el contenedor. */
+.signature-pad {
+  margin-top: 1rem;
+  background: var(--surface);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  touch-action: none; /* el dedo dibuja en lugar de desplazar la página */
+}
+
+#signature-canvas { display: block; width: 100%; height: 180px; }
+
+.signature-preview, .logo-preview { margin: 1rem 0; }
+.signature-preview img { max-width: 100%; max-height: 120px; }
+.logo-preview img { max-width: 100%; max-height: 90px; }
+
+/* HTMX ------------------------------------------------------------------- */
+
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator { display: inline; }

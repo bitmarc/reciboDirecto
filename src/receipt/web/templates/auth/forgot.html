@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Recuperar contraseña — Recibo{% endblock %}
+
+{% block content %}
+<section class="card card--narrow">
+  <h1>Recuperar contraseña</h1>
+  <p class="muted">Te enviamos una liga para elegir una nueva.</p>
+
+  <form method="post" action="/auth/forgot-password">
+    <label for="email">Tu correo</label>
+    <input id="email" name="email" type="email" inputmode="email" required autofocus
+           autocomplete="username">
+
+    <button type="submit" class="button button--primary">Enviar la liga</button>
+  </form>
+
+  <p class="muted"><a href="/entrar">Volver a entrar</a></p>
+</section>
+{% endblock %}

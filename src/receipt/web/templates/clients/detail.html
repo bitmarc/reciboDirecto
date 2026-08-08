@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ client.full_name }} — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ client.full_name }}</h1>
+  <a class="button button--secondary button--inline" href="/clientes/{{ client.id }}/editar">Editar</a>
+</div>
+
+{% if client.archived_at %}
+  <p class="alert alert--notice">
+    Este cliente está archivado desde el {{ client.archived_at | fecha_larga }}.
+    No aparece al cobrar, pero su historial se conserva.
+  </p>
+{% endif %}
+
+<section class="card">
+  <dl class="facts">
+    <dt>Teléfono</dt>
+    <dd>{{ client.phone }}</dd>
+    <dt>Correo</dt>
+    <dd>{{ client.email or '—' }}</dd>
+    <dt>Alta</dt>
+    <dd>{{ client.created_at | fecha_larga }}</dd>
+  </dl>
+</section>
+
+{% if duplicates %}
+  <section class="card">
+    <h2>Puede estar duplicado</h2>
+    <p class="muted">Hay otros clientes con este mismo teléfono:</p>
+    <ul class="list">
+      {% for other in duplicates %}
+        <li class="list__item">
+          <a href="/clientes/{{ other.id }}">
+            <span class="list__title">{{ other.full_name }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+<section class="card">
+  <h2>Trabajos</h2>
+  {# El historial por cliente llega con el motor de cobro, en el hito 2. #}
+  <p class="empty">Todavía no hay trabajos registrados para este cliente.</p>
+</section>
+
+<section class="card">
+  <form method="post"
+        action="/clientes/{{ client.id }}/{% if client.archived_at %}restaurar{% else %}archivar{% endif %}">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <button type="submit" class="button button--secondary">
+      {% if client.archived_at %}Sacar del archivo{% else %}Archivar cliente{% endif %}
+    </button>
+  </form>
+  <p class="muted">
+    Archivar solo lo oculta al cobrar. No se borra nada: sus recibos siguen
+    disponibles.
+  </p>
+</section>
+{% endblock %}

@@ -21,7 +21,10 @@ def get_engine() -> AsyncEngine:
         settings = get_settings()
         _engine = create_async_engine(
             settings.database_url,
-            echo=settings.debug and settings.environment == "development",
+            # El volcado de SQL se pide aparte de `debug`: encendido por omisión
+            # ahoga el log y deja ilegible, por ejemplo, la liga que imprime el
+            # adaptador de correo de consola.
+            echo=settings.sql_echo,
             pool_pre_ping=True,
             # El tier Burstable B1ms de Azure PostgreSQL tiene pocas conexiones
             # disponibles (§13); un pool modesto evita agotarlas.

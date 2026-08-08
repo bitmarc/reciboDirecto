@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Confirmación de correo — Recibo{% endblock %}
+
+{% block content %}
+<section class="card card--narrow">
+  {% if ok %}
+    <h1>Correo confirmado</h1>
+    <p class="muted">
+      Listo. Si alguna vez olvidas tu contraseña, podremos ayudarte a recuperarla.
+    </p>
+    <a class="button button--primary" href="/">Ir a mi cuenta</a>
+  {% else %}
+    <h1>Esa liga ya no sirve</h1>
+    <p class="muted">
+      Puede que ya la hayas usado o que haya vencido. Pide una nueva desde
+      Ajustes.
+    </p>
+    <a class="button button--secondary" href="/ajustes">Ir a Ajustes</a>
+  {% endif %}
+</section>
+{% endblock %}

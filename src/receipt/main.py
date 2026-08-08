@@ -11,9 +11,11 @@ from starlette.responses import Response
 
 from receipt.config import get_settings
 from receipt.db import dispose_engine
+from receipt.logging_config import configure_logging
 from receipt.security.headers import SecurityHeadersMiddleware
 from receipt.web.dependencies import NotAuthenticated, redirect_to_login
-from receipt.web.routes import auth, pages
+from receipt.web.routes import auth, clients, pages
+from receipt.web.routes import settings as settings_routes
 from receipt.web.templating import STATIC_DIR
 
 
@@ -25,6 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    configure_logging(debug=settings.debug)
 
     app = FastAPI(
         title="Recibo",
@@ -41,6 +44,10 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     app.include_router(auth.router)
+    app.include_router(settings_routes.router)
+    app.include_router(clients.router)
+    # Las páginas van al final: registran los alias de §6, que son comodines
+    # respecto de las rutas concretas de arriba.
     app.include_router(pages.router)
 
     @app.exception_handler(NotAuthenticated)

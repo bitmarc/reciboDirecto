@@ -17,8 +17,15 @@ dependencies = [
     "itsdangerous (>=2.2,<3.0)",
     "email-validator (>=2.2,<3.0)",
     "azure-storage-blob (>=12.24,<13.0)",
+    # Transporte asíncrono del SDK de Azure: `azure.storage.blob.aio` no arranca
+    # sin él y el fallo aparece hasta la primera subida.
+    "aiohttp (>=3.11,<4.0)",
     "weasyprint (>=63.0,<64.0)",
     "num2words (>=0.5.13,<0.6)",
+    # Llega como transitiva de WeasyPrint, pero el código la importa
+    # directamente para validar y normalizar la firma y el logo: depender de una
+    # transitiva es frágil.
+    "pillow (>=11.0,<13.0)",
 ]
 
 [project.optional-dependencies]
@@ -61,6 +68,11 @@ select = [
     "ASYNC",
 ]
 ignore = ["B008"]  # Depends() en argumentos por defecto es el idioma de FastAPI
+
+# El copy visible y los comentarios van en español con tipografía correcta
+# (§0, §16). El signo de multiplicación en las dimensiones y las rayas de inciso
+# no son homoglifos colados por error: son el carácter que toca.
+allowed-confusables = ["×", "–", "—", "−", "’"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]

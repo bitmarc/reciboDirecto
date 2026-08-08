@@ -1,26 +1,14 @@
-"""El esqueleto web responde y las rutas privadas están cerradas."""
+"""El esqueleto web responde y las rutas privadas están cerradas.
 
-from collections.abc import AsyncIterator
+El fixture `client` vive en `conftest.py` y lo comparten todas las pruebas web.
+"""
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from httpx import AsyncClient
 
-from receipt.db import get_db_session
-from receipt.main import create_app
 from receipt.security.headers import PUBLIC_RECEIPT_PREFIX
 
 pytestmark = pytest.mark.db
-
-
-@pytest.fixture
-async def client(db: AsyncSession) -> AsyncIterator[AsyncClient]:
-    app = create_app()
-    app.dependency_overrides[get_db_session] = lambda: db
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as http:
-        yield http
-    app.dependency_overrides.clear()
 
 
 async def test_health_check_responds(client: AsyncClient) -> None:

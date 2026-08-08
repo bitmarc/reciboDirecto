@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set editing = client is not none %}
+{% block title %}{% if editing %}Editar cliente{% else %}Nuevo cliente{% endif %} — Recibo{% endblock %}
+
+{% block content %}
+<section class="card card--narrow">
+  <h1>{% if editing %}Editar cliente{% else %}Nuevo cliente{% endif %}</h1>
+
+  {% set v = values or {} %}
+  <form method="post" action="{% if editing %}/clientes/{{ client.id }}{% else %}/clientes{% endif %}">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+
+    <label for="full_name">Nombre completo</label>
+    <input id="full_name" name="full_name" required autofocus
+           value="{{ v.full_name if v.full_name is defined else (client.full_name if editing else '') }}">
+    <p class="muted">Nombre y al menos un apellido: es lo que dirá el recibo.</p>
+
+    <label for="phone">Teléfono</label>
+    <input id="phone" name="phone" type="tel" inputmode="tel" required
+           value="{{ v.phone if v.phone is defined else (client.phone if editing else '') }}">
+
+    <label for="email">Correo <span class="muted">(opcional)</span></label>
+    <input id="email" name="email" type="email" inputmode="email"
+           value="{{ v.email if v.email is defined else (client.email or '' if editing else '') }}">
+    <p class="muted">Si lo capturas, podrás enviarle el recibo por correo.</p>
+
+    <button type="submit" class="button button--primary">
+      {% if editing %}Guardar cambios{% else %}Dar de alta{% endif %}
+    </button>
+  </form>
+
+  <p class="muted">
+    <a href="{% if editing %}/clientes/{{ client.id }}{% else %}/clientes{% endif %}">Cancelar</a>
+  </p>
+</section>
+{% endblock %}
