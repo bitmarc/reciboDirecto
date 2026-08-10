@@ -105,7 +105,21 @@ cada `AC`.
 - **`agreed_total_cents` lo protege un trigger de PostgreSQL**, no la capa de
   aplicación. `AC-01` exige que modificarlo falle también por SQL directo.
 - **Los folios usan una tabla contador con `UPDATE … RETURNING`** (`RN-25`).
-  PostgreSQL no tiene secuencias por fila y los folios son por cuenta.
+  PostgreSQL no tiene secuencias por fila y los folios son por cuenta. El
+  bloqueo se libera al cerrar la transacción, así que un cobro que falla y
+  revierte no quema folio: los huecos de `RN-23` vienen de cancelaciones.
+- **Un pago mayor que el saldo se rechaza**, con un error que apunta al monto
+  extra. Un sobrepago es un aumento de precio sin documentar, y `RN-12` exige
+  motivo para todo aumento; §7.2 ya pone ese campo en la misma pantalla. Es
+  decisión de producto, no una regla del PRD: está en `services/charging.py`.
+- **El snapshot lleva `paid_at_local` y `version`**, que §4.3 no enumera. El
+  primero porque un comprobante de pago tiene que poder decir cuándo se pagó, y
+  con captura en diferido (§17) esa fecha no coincide con la de emisión; el
+  segundo porque `RN-10` prohíbe reescribir recibos, así que el formato tiene
+  que decir qué forma tiene para poder evolucionar.
+- **El cupo del plan gratuito se cuenta por mes de emisión; el ingreso, por
+  `paid_at`.** Son dos cortes distintos porque miden cosas distintas: `RN-33`
+  acota cuántos recibos se generan, §9.1 cuánto se cobró.
 - **Las rutas visibles van en español** (`/cobrar`, `/recibos`, `/clientes`),
   porque §0 exige que todo lo visible al usuario esté en español de México. La
   superficie en inglés de §6 del PRD queda como alias de redirección.
@@ -136,7 +150,7 @@ enchufa al desplegar, que es cuando el hito 4 también necesitará enviar recibo
 |---|---|---|
 | 0 | Cimientos: Docker, esquema completo, migraciones, autenticación, CI | **Terminado** — `AC-01` pasa |
 | 1 | Perfil del emisor, firma, logo, clientes, recuperación de contraseña | **Terminado** — media parte de `AC-02`; barrido de `AC-13` en marcha |
-| 2 | Motor de cobro: servicios, pagos, recibos, snapshot, folios, cancelación | Pendiente |
+| 2 | Motor de cobro: servicios, pagos, recibos, snapshot, folios, cancelación | **Terminado** — `AC-04` a `AC-09`, `AC-11` y `AC-16` pasan |
 | 3 | Plantilla del recibo, PDF, liga pública, firma del cliente | Pendiente |
 | 4 | Pantalla de cobro e idempotencia, compartir | Pendiente |
 | 5 | Contabilidad: panel, comparación mensual, quién me debe, CSV | Pendiente |

@@ -1,3 +1,3 @@
-from receipt.web.routes import auth, clients, pages, settings
+from receipt.web.routes import auth, clients, pages, receipts, settings, work
 
-__all__ = ["auth", "clients", "pages", "settings"]
+__all__ = ["auth", "clients", "pages", "receipts", "settings", "work"]

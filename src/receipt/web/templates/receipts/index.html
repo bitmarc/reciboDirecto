@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Recibos — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Recibos</h1>
+</div>
+
+<section class="card">
+  <form method="get" action="/recibos">
+    <label for="q">Buscar por folio o por cliente</label>
+    <input id="q" name="q" type="search" value="{{ q }}" autocomplete="off"
+           placeholder="RB-0001 o Ana Ramírez">
+    <input type="hidden" name="estado" value="{{ estado }}">
+    <button type="submit" class="button button--secondary">Buscar</button>
+  </form>
+
+  <nav class="filters">
+    <a href="/recibos?q={{ q }}" class="tag {% if not estado %}tag--ok{% endif %}">Todos</a>
+    <a href="/recibos?q={{ q }}&estado=issued" class="tag {% if estado == 'issued' %}tag--ok{% endif %}">Emitidos</a>
+    <a href="/recibos?q={{ q }}&estado=cancelled" class="tag {% if estado == 'cancelled' %}tag--ok{% endif %}">Cancelados</a>
+  </nav>
+</section>
+
+{% if receipts %}
+  <section class="card">
+    <ul class="list">
+      {% for receipt in receipts %}
+        {# Lo que se lee es el snapshot, no las tablas vivas (RN-10, AC-03). #}
+        <li class="list__item {% if receipt.status.value == 'cancelled' %}list__item--muted{% endif %}">
+          <a href="/recibos/{{ receipt.id }}">
+            <span class="list__title">
+              {{ receipt.folio }} · {{ receipt.snapshot.amounts.payment_cents | pesos }}
+            </span>
+            <span class="list__meta">
+              {{ receipt.snapshot.client.full_name }} · {{ receipt.issued_at | fecha_larga }}
+            </span>
+            {% if receipt.status.value == 'cancelled' %}
+              <span class="tag">cancelado</span>
+            {% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% else %}
+  <p class="empty">
+    {% if q or estado %}
+      Ningún recibo coincide con la búsqueda.
+    {% else %}
+      Todavía no has emitido recibos.
+    {% endif %}
+  </p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Trabajos — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Trabajos</h1>
+</div>
+
+{# Los trabajos no se dan de alta aquí: nacen con el primer pago (RN-15). #}
+<section class="card">
+  <nav class="filters">
+    <a href="/trabajos" class="tag {% if not estado %}tag--ok{% endif %}">Todos</a>
+    <a href="/trabajos?estado=open" class="tag {% if estado == 'open' %}tag--ok{% endif %}">Abiertos</a>
+    <a href="/trabajos?estado=settled" class="tag {% if estado == 'settled' %}tag--ok{% endif %}">Liquidados</a>
+  </nav>
+</section>
+
+{% if services %}
+  <section class="card">
+    <ul class="list">
+      {% for service in services %}
+        {% set summary = summaries[service.id] %}
+        <li class="list__item">
+          <a href="/trabajos/{{ service.id }}">
+            <span class="list__title">{{ service.concept }}</span>
+            <span class="list__meta">
+              {{ service.code }} · {{ clients[service.client_id].full_name }}
+              {% if service.location_alias %} · {{ service.location_alias }}{% endif %}
+            </span>
+            <span class="list__meta">
+              {% if summary.current_total_cents is not none %}
+                Total {{ summary.current_total_cents | pesos }} ·
+                Pagado {{ summary.paid_cents | pesos }} ·
+                <strong>Saldo {{ summary.balance_cents | pesos }}</strong>
+              {% else %}
+                Pago único · {{ summary.paid_cents | pesos }}
+              {% endif %}
+            </span>
+            <span class="tag {% if service.status.value == 'settled' %}tag--ok{% endif %}">
+              {{ estado_trabajo[service.status] }}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% else %}
+  <p class="empty">
+    {% if estado %}
+      No hay trabajos con ese estado.
+    {% else %}
+      Todavía no hay trabajos. Se crean solos al registrar el primer cobro.
+    {% endif %}
+  </p>
+{% endif %}
+{% endblock %}

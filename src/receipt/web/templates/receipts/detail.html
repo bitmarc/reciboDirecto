@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ receipt.folio }} — Recibo{% endblock %}
+
+{# Vista del emisor. La plantilla del comprobante en sí —la que sirve a la
+   página pública, al PDF y a la impresión— es del hito 3 y se escribe una sola
+   vez (§3.2). Aquí solo se enseña lo que quedó congelado, para poder revisarlo
+   y cancelarlo.
+
+   Todo sale de `snapshot`: si el emisor cambió su teléfono o renombró al
+   cliente, este recibo sigue diciendo lo que decía (AC-02, AC-03). #}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ receipt.folio }}</h1>
+  <span class="tag {% if receipt.status.value == 'issued' %}tag--ok{% endif %}">
+    {{ estado_recibo[receipt.status] }}
+  </span>
+</div>
+
+{% if receipt.status.value == 'cancelled' %}
+  <p class="alert alert--error">
+    <strong>Cancelado</strong> el {{ receipt.cancelled_at | fecha_hora }}.
+    Motivo: {{ receipt.cancellation_reason }}
+  </p>
+{% endif %}
+
+<section class="card">
+  <dl class="facts">
+    <dt>Emitido</dt>
+    <dd>{{ receipt.issued_at | fecha_hora }} · {{ snapshot.city }}</dd>
+    <dt>Recibí de</dt>
+    <dd>{{ snapshot.client.full_name }} · {{ snapshot.client.phone }}</dd>
+    <dt>Concepto</dt>
+    <dd>{{ snapshot.service.concept_line }}</dd>
+    <dt>Trabajo</dt>
+    <dd><a href="/trabajos/{{ service.id }}">{{ snapshot.service.code }}</a></dd>
+    {% if snapshot.service.location_alias or snapshot.service.location_address %}
+      <dt>Lugar</dt>
+      <dd>
+        {{ snapshot.service.location_alias or '' }}
+        {%- if snapshot.service.location_alias and snapshot.service.location_address %} — {% endif -%}
+        {{ snapshot.service.location_address or '' }}
+      </dd>
+    {% endif %}
+    <dt>Método</dt>
+    <dd>{{ metodo_pago.get(snapshot.method, snapshot.method) }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Montos congelados</h2>
+  {# El orden es el de §8.3 y no debe alterarse: es el que hace legible el
+     recibo detallado. El material NO aparece (RN-14, AC-06). #}
+  <dl class="facts">
+    {% if amounts.agreed_total_cents is not none %}
+      <dt>Total acordado</dt>
+      <dd>{{ amounts.agreed_total_cents | pesos }}</dd>
+    {% endif %}
+
+    {% for adjustment in amounts.adjustments %}
+      <dt>Trabajo adicional — {{ adjustment.reason }}</dt>
+      <dd>{{ adjustment.amount_cents | pesos }}</dd>
+    {% endfor %}
+
+    {% if amounts.adjustments %}
+      <dt>Total vigente</dt>
+      <dd>{{ amounts.current_total_cents | pesos }}</dd>
+    {% endif %}
+
+    {% if amounts.previous_paid_cents %}
+      <dt>Pagos anteriores</dt>
+      <dd>{{ amounts.previous_paid_cents | pesos }}</dd>
+    {% endif %}
+
+    <dt>Pago recibido</dt>
+    <dd><strong>{{ amounts.payment_cents | pesos }}</strong></dd>
+
+    <dt>Pagado acumulado</dt>
+    <dd>{{ amounts.accumulated_paid_cents | pesos }}</dd>
+
+    {% if amounts.balance_cents is not none %}
+      <dt>Saldo pendiente</dt>
+      <dd>
+        {% if amounts.balance_cents == 0 %}
+          {{ 0 | pesos }} — Liquidado
+        {% else %}
+          <strong>{{ amounts.balance_cents | pesos }}</strong>
+        {% endif %}
+      </dd>
+    {% endif %}
+  </dl>
+</section>
+
+{% if receipt.status.value == 'issued' %}
+  <section class="card">
+    <h2>Cancelar</h2>
+    <form method="post" action="/recibos/{{ receipt.id }}/cancelar">
+      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+      <label for="reason">Motivo de la cancelación</label>
+      <input id="reason" name="reason" type="text" required
+             placeholder="Se registró con el monto equivocado">
+      {# RN-22: cancelar nunca borra. RN-23: el folio no se reutiliza. #}
+      <p class="muted">
+        El recibo no se borra: queda cancelado en el historial, su liga sigue
+        funcionando con el sello de cancelado y su folio no se vuelve a usar.
+        El pago deja de contar para el saldo del trabajo.
+      </p>
+      <button type="submit" class="button button--secondary">Cancelar recibo</button>
+    </form>
+  </section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ service.code }} — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ service.concept }}</h1>
+  <span class="tag {% if service.status.value == 'settled' %}tag--ok{% endif %}">
+    {{ estado_trabajo[service.status] }}
+  </span>
+</div>
+
+<section class="card">
+  <dl class="facts">
+    <dt>Folio del trabajo</dt>
+    <dd>{{ service.code }}</dd>
+    <dt>Cliente</dt>
+    <dd><a href="/clientes/{{ client.id }}">{{ client.full_name }}</a></dd>
+    {% if service.location_alias or service.location_address %}
+      <dt>Lugar</dt>
+      <dd>
+        {{ service.location_alias or '' }}
+        {%- if service.location_alias and service.location_address %} — {% endif -%}
+        {{ service.location_address or '' }}
+      </dd>
+    {% endif %}
+    <dt>Alta</dt>
+    <dd>{{ service.created_at | fecha_larga }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Montos</h2>
+  {% if totals.current_total_cents is not none %}
+    <dl class="facts">
+      <dt>Total acordado</dt>
+      <dd>{{ service.agreed_total_cents | pesos }}</dd>
+      {% if adjustments %}
+        <dt>Total vigente</dt>
+        <dd>{{ totals.current_total_cents | pesos }}</dd>
+      {% endif %}
+      <dt>Pagado</dt>
+      <dd>{{ totals.paid_cents | pesos }}</dd>
+      <dt>Saldo pendiente</dt>
+      <dd>
+        {% if totals.balance_cents == 0 %}
+          {{ 0 | pesos }} — Liquidado
+        {% else %}
+          <strong>{{ totals.balance_cents | pesos }}</strong>
+        {% endif %}
+      </dd>
+    </dl>
+  {% else %}
+    {# Sin total acordado no hay saldo que calcular (RN-15). #}
+    <p class="muted">Este trabajo se cobró como pago único, sin total acordado.</p>
+    <dl class="facts">
+      <dt>Cobrado</dt>
+      <dd>{{ totals.paid_cents | pesos }}</dd>
+    </dl>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Trabajo adicional</h2>
+  {% if adjustments %}
+    <ul class="list">
+      {% for adjustment in adjustments %}
+        <li class="list__item">
+          <span class="list__title">{{ adjustment.amount_cents | pesos }}</span>
+          <span class="list__meta">{{ adjustment.reason }}</span>
+          <span class="list__meta">{{ adjustment.created_at | fecha_larga }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">Sin montos extra.</p>
+  {% endif %}
+
+  {% if service.agreed_total_cents is not none and service.status.value != 'closed_uncollected' %}
+    <form method="post" action="/trabajos/{{ service.id }}/extras">
+      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+      <label for="amount_cents">Monto extra, en centavos</label>
+      <input id="amount_cents" name="amount_cents" type="number" min="1" required
+             value="{{ values.amount_cents if values else '' }}">
+      <label for="reason">Motivo</label>
+      <input id="reason" name="reason" type="text" required
+             placeholder="Cambio de 2 contactos en recámara"
+             value="{{ values.reason if values else '' }}">
+      {# RN-12: el motivo aparece textualmente en los recibos posteriores. #}
+      <p class="muted">
+        El motivo aparecerá tal cual en el siguiente recibo. Es lo que evita el
+        reclamo de después.
+      </p>
+      <button type="submit" class="button button--secondary">Agregar monto extra</button>
+    </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Pagos</h2>
+  {% if payments %}
+    <ul class="list">
+      {% for payment in payments %}
+        <li class="list__item {% if payment.status.value == 'cancelled' %}list__item--muted{% endif %}">
+          {% set receipt = receipts.get(payment.id) %}
+          {% if receipt %}<a href="/recibos/{{ receipt.id }}">{% endif %}
+            <span class="list__title">{{ payment.amount_cents | pesos }}</span>
+            <span class="list__meta">
+              {{ payment.paid_at | fecha_larga }}
+              {% if receipt %} · {{ receipt.folio }}{% endif %}
+            </span>
+            {% if payment.status.value == 'cancelled' %}
+              <span class="tag">cancelado</span>
+            {% endif %}
+          {% if receipt %}</a>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">Todavía no hay pagos registrados.</p>
+  {% endif %}
+</section>
+{% endblock %}

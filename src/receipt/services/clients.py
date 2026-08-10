@@ -35,8 +35,13 @@ _PLAIN = "aaaaaeeeeiiiiooooouuuunc"
 assert len(_ACCENTED) == len(_PLAIN)
 
 
-def _folded(value: ColumnExpressionArgument[str] | str) -> ColumnElement[str]:
-    """Minúsculas y sin acentos, para comparar como la gente teclea."""
+def folded(value: ColumnExpressionArgument[str] | str) -> ColumnElement[str]:
+    """Minúsculas y sin acentos, para comparar como la gente teclea.
+
+    Es público porque el historial de recibos busca igual (`services.receipts`):
+    dos buscadores con reglas distintas de acentuación desconciertan más que uno
+    que no encuentra nada.
+    """
     return func.translate(func.lower(value), _ACCENTED, _PLAIN)
 
 
@@ -101,10 +106,10 @@ def search_statement(
 
     term = normalize_name(query)
     if term:
-        pattern = _folded(f"%{term}%")
+        pattern = folded(f"%{term}%")
         conditions = [
-            _folded(Client.full_name).like(pattern),
-            _folded(Client.phone).like(pattern),
+            folded(Client.full_name).like(pattern),
+            folded(Client.phone).like(pattern),
         ]
 
         digits = _NON_DIGITS.sub("", term)

@@ -21,6 +21,8 @@ from receipt.services.clients import (
     update_client,
 )
 from receipt.services.errors import DomainError
+from receipt.services.work import history_statement as work_history
+from receipt.services.work import summaries_for
 from receipt.web.dependencies import DbSession, Scope, not_found
 from receipt.web.templating import render
 
@@ -102,7 +104,17 @@ async def create(
 async def detail(request: Request, scope: Scope, client_id: int) -> Response:
     client = await _load(scope, client_id)
     duplicates = await find_possible_duplicates(scope, phone=client.phone, exclude_id=client.id)
-    return render(request, "clients/detail.html", {"client": client, "duplicates": duplicates})
+    services = await scope.list(work_history(scope, client_id=client.id))
+    return render(
+        request,
+        "clients/detail.html",
+        {
+            "client": client,
+            "duplicates": duplicates,
+            "services": services,
+            "summaries": await summaries_for(scope, services),
+        },
+    )
 
 
 @router.get("/clientes/{client_id}/editar")

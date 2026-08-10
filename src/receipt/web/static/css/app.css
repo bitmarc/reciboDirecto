@@ -217,6 +217,17 @@ button:focus-visible, a:focus-visible {
 
 .tag--ok { background: var(--notice-bg); color: var(--accent); border-color: transparent; }
 
+/* Filtros por estado de `/trabajos` y `/recibos`. Son etiquetas que además
+   navegan, así que heredan el aspecto de `.tag` y solo quitan el subrayado. */
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.filters a { text-decoration: none; min-height: var(--tap); display: inline-flex; align-items: center; }
+
 .checkbox {
   display: flex;
   align-items: center;

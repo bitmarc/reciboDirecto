@@ -15,12 +15,19 @@ from receipt.domain.clock import format_datetime_es, format_long_date_es, to_loc
 from receipt.domain.money import amount_in_words, format_pesos
 from receipt.security.csrf import CSRF_FIELD_NAME
 from receipt.security.sessions import read_session
+from receipt.web import labels
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["csrf_field_name"] = CSRF_FIELD_NAME
+
+# Etiquetas del dominio, disponibles en toda plantilla sin pasarlas por contexto.
+templates.env.globals["estado_trabajo"] = labels.SERVICE_STATUS
+templates.env.globals["estado_recibo"] = labels.RECEIPT_STATUS
+templates.env.globals["estado_pago"] = labels.PAYMENT_STATUS
+templates.env.globals["metodo_pago"] = labels.PAYMENT_METHOD_BY_VALUE
 templates.env.filters["pesos"] = format_pesos
 templates.env.filters["pesos_en_letra"] = amount_in_words
 templates.env.filters["fecha_larga"] = format_long_date_es

@@ -5,8 +5,8 @@ direcciones y §0 exige que todo lo visible esté en español de México. La
 superficie en inglés de §6 se conserva como alias de redirección, de modo que
 ambas secciones del PRD resuelven.
 
-Las pantallas de contenido llegan en sus hitos: `/cobrar` en el 4, `/recibos` y
-`/trabajos` en el 2 y el 3, `/clientes` y `/ajustes` en el 1.
+Las pantallas de contenido llegan en sus hitos: `/clientes` y `/ajustes` en el 1,
+`/trabajos` y `/recibos` en el 2, `/cobrar` en el 4.
 """
 
 from fastapi import APIRouter, status
