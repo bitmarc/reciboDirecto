@@ -228,6 +228,86 @@ button:focus-visible, a:focus-visible {
 
 .filters a { text-decoration: none; min-height: var(--tap); display: inline-flex; align-items: center; }
 
+/* --------------------------------------------------------------------------
+   Pantalla de cobro (§7.1, §7.2)
+   --------------------------------------------------------------------------
+   La única pantalla que importa. El emisor está de pie, con el celular en una
+   mano y posiblemente las manos sucias: objetivos grandes, contraste alto y
+   todo alcanzable con el pulgar. Lo demás puede ser feo; esto no.
+   -------------------------------------------------------------------------- */
+
+/* Espacio al pie para que el botón fijo no tape el último campo. */
+.cobro { padding-bottom: 6rem; }
+
+.cobro__submit {
+  position: sticky;
+  bottom: 0;
+  padding: 0.75rem 0 1rem;
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+
+.cobro__submit .button { width: 100%; min-height: 3.5rem; font-size: 1.125rem; }
+
+/* El monto es el campo que más se mira y el que menos se puede equivocar. */
+.input--money {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: right;
+  min-height: 3.5rem;
+}
+
+/* Efectivo / transferencia: dos objetivos grandes, no un desplegable. */
+.choice { border: 0; padding: 0; margin: 1rem 0 0; }
+.choice__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  font-weight: 400;
+}
+.choice__option input { width: auto; min-height: 0; }
+.choice--stack { margin-bottom: 1rem; }
+.choice legend { font-weight: 600; font-size: 0.9375rem; }
+
+/* Resultado del buscador que selecciona en vez de navegar. */
+.list__pick {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0.75rem 1.25rem;
+  min-height: var(--tap);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.list__pick:hover { background: var(--bg); }
+
+.chosen { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.share { display: grid; gap: 0.5rem; }
+.share form { margin: 0; }
+.share .button { width: 100%; }
+
+/* Etiqueta solo para lectores de pantalla: el campo de monto y el método se
+   entienden por su contexto visual, pero no pueden quedarse sin nombre. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .checkbox {
   display: flex;
   align-items: center;

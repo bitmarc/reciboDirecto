@@ -17,10 +17,26 @@ logger = logging.getLogger("receipt.mail")
 
 
 @dataclass(frozen=True)
+class Attachment:
+    """Archivo que viaja con el mensaje.
+
+    Existe por el envío del recibo (§7.2): el cliente se queda con su copia sin
+    tener que hacer clic, que es exactamente lo que le pide la leyenda de §7.3.
+    Una liga suelta depende de que la abra, y un correo que solo trae un enlace
+    se parece demasiado a un intento de phishing.
+    """
+
+    filename: str
+    content: bytes
+    content_type: str = "application/octet-stream"
+
+
+@dataclass(frozen=True)
 class Message:
     to: str
     subject: str
     body: str
+    attachments: tuple[Attachment, ...] = ()
 
 
 class Mailer(Protocol):
@@ -36,16 +52,25 @@ class ConsoleMailer:
     """
 
     async def send(self, message: Message) -> None:
+        adjuntos = (
+            "\n".join(
+                f"Adjunto: {a.filename} ({len(a.content)} bytes, {a.content_type})"
+                for a in message.attachments
+            )
+            or "—"
+        )
         logger.info(
             "\n"
             "─── CORREO (no enviado, adaptador de consola) ───\n"
             "Para:    %s\n"
             "Asunto:  %s\n"
             "%s\n"
+            "%s\n"
             "────────────────────────────────────────────────",
             message.to,
             message.subject,
             message.body,
+            adjuntos,
         )
 
 

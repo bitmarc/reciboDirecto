@@ -1,25 +1,47 @@
-{# Parcial del buscador de clientes.
-   Se usa en `/clientes` y, desde el hito 4, en el bloque 1 de `/cobrar`.
-   No extiende `base.html`: HTMX lo inyecta suelto. #}
+{# Parcial del buscador de clientes. HTMX lo inyecta suelto, sin extender base.
+
+   Sirve a dos pantallas con la MISMA búsqueda —la que ignora acentos, del hito
+   1— y solo cambia lo que hace un resultado al tocarlo:
+
+   - en `/clientes`, navega a la ficha;
+   - en `/cobrar` (`picker`), selecciona sin salir de la pantalla (§7.2).
+
+   Dos parciales separados acabarían con dos reglas de acentuación y dos estados
+   vacíos que se contradicen. #}
 
 {% if clients %}
   <ul class="list">
     {% for client in clients %}
       <li class="list__item {% if client.archived_at %}list__item--muted{% endif %}">
-        <a href="/clientes/{{ client.id }}">
-          <span class="list__title">{{ client.full_name }}</span>
-          <span class="list__meta">{{ client.phone }}</span>
-          {% if client.archived_at %}<span class="tag">archivado</span>{% endif %}
-        </a>
+        {% if picker %}
+          <button type="button" class="list__pick"
+                  data-elige-cliente="{{ client.id }}"
+                  data-nombre="{{ client.full_name }}">
+            <span class="list__title">{{ client.full_name }}</span>
+            <span class="list__meta">{{ client.phone }}</span>
+          </button>
+        {% else %}
+          <a href="/clientes/{{ client.id }}">
+            <span class="list__title">{{ client.full_name }}</span>
+            <span class="list__meta">{{ client.phone }}</span>
+            {% if client.archived_at %}<span class="tag">archivado</span>{% endif %}
+          </a>
+        {% endif %}
       </li>
     {% endfor %}
   </ul>
 {% elif q %}
   <p class="empty">
     Nadie coincide con «{{ q }}».
-    <a href="/clientes/nuevo">Dar de alta un cliente</a>
+    {% if picker %}
+      {# En cobro no se sale de la pantalla: el alta son dos campos de este
+         mismo formulario (§7.2). #}
+      <button type="button" class="link-button" data-cliente-nuevo>Darlo de alta aquí</button>
+    {% else %}
+      <a href="/clientes/nuevo">Dar de alta un cliente</a>
+    {% endif %}
   </p>
-{% else %}
+{% elif not picker %}
   <p class="empty">
     Todavía no tienes clientes.
     <a href="/clientes/nuevo">Da de alta al primero</a>

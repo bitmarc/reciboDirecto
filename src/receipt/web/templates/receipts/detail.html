@@ -11,6 +11,13 @@
 {% block head %}{% include "receipt/_styles.html" %}{% endblock %}
 
 {% block content %}
+{% if listo %}
+  <p class="alert alert--notice">Listo. El recibo {{ receipt.folio }} ya está emitido.</p>
+{% endif %}
+{% if request.query_params.get('enviado') %}
+  <p class="alert alert--notice">Se lo enviamos a {{ client.email }}.</p>
+{% endif %}
+
 <div class="page-head">
   <h1>{{ receipt.folio }}</h1>
   <span class="tag {% if receipt.status.value == 'issued' %}tag--ok{% endif %}">
@@ -18,21 +25,79 @@
   </span>
 </div>
 
+{# §7.2: la pantalla de resultado enseña la vista previa del recibo y, debajo,
+   las tres acciones. La vista previa es el documento real, no una maqueta. #}
 {% include "receipt/_document.html" %}
 
+{% if receipt.status.value == 'issued' %}
 <section class="card">
   <h2>Compartir</h2>
-  {# El envío por WhatsApp y por correo llegan en el hito 4 (RN-32: siempre
-     manual). Lo que ya funciona es la liga y la descarga. #}
+  {# RN-32: siempre manual. El emisor copia la liga, comparte desde su propio
+     WhatsApp o manda un correo. Nunca vía WhatsApp Business API (§2.2). #}
+
+  <div class="share">
+    {% if whatsapp_url %}
+      <a class="button button--primary" href="{{ whatsapp_url }}"
+         target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a>
+    {% else %}
+      <button type="button" class="button button--secondary" disabled>
+        Compartir por WhatsApp
+      </button>
+      <p class="muted">
+        El teléfono de {{ client.full_name }} no se entiende como número de 10
+        dígitos. Corrígelo en su ficha para poder compartirle por WhatsApp.
+      </p>
+    {% endif %}
+
+    <button type="button" class="button button--secondary"
+            id="copiar-liga" data-copiar="{{ public_url }}">Copiar liga</button>
+
+    {% if client.email %}
+      <form method="post" action="/recibos/{{ receipt.id }}/enviar">
+        <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+        <button type="submit" class="button button--secondary">
+          Enviar por correo a {{ client.email }}
+        </button>
+      </form>
+    {% else %}
+      <button type="button" class="button button--secondary" disabled>Enviar por correo</button>
+      {# §7.2: deshabilitado con explicación, no escondido. #}
+      <p class="muted">
+        {{ client.full_name }} no tiene correo registrado.
+        <a href="/clientes/{{ client.id }}/editar">Agrégalo en su ficha</a> para poder enviárselo.
+      </p>
+    {% endif %}
+  </div>
+
+  <p class="muted">
+    Liga: <a href="{{ public_url }}">{{ public_url }}</a>
+  </p>
+  <a class="button button--secondary" href="/recibos/{{ receipt.id }}/pdf">Descargar PDF</a>
+</section>
+{% endif %}
+
+<section class="card">
   <dl class="facts">
-    <dt>Liga pública</dt>
-    <dd><a href="/r/{{ receipt.public_token }}">/r/{{ receipt.public_token }}</a></dd>
     <dt>Trabajo</dt>
     <dd><a href="/trabajos/{{ service.id }}">{{ doc.snapshot.service.code }}</a></dd>
     <dt>Cliente</dt>
     <dd><a href="/clientes/{{ client.id }}">{{ client.full_name }}</a></dd>
   </dl>
-  <a class="button button--secondary" href="/recibos/{{ receipt.id }}/pdf">Descargar PDF</a>
+
+  {# §8.4: la elección de plantilla es automática, pero el emisor puede forzar
+     la otra desde la vista previa. Ninguna cifra cambia; solo la presentación. #}
+  <form method="post" action="/recibos/{{ receipt.id }}/plantilla">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <input type="hidden" name="template"
+           value="{% if receipt.template.value == 'detailed' %}single{% else %}detailed{% endif %}">
+    <button type="submit" class="link-button">
+      {% if receipt.template.value == 'detailed' %}
+        Mostrarlo como recibo simple, sin la tabla de saldos
+      {% else %}
+        Mostrarlo como recibo detallado, con la tabla de saldos
+      {% endif %}
+    </button>
+  </form>
 </section>
 
 {% if receipt.status.value == 'issued' %}
@@ -52,7 +117,7 @@
        Los identificadores son los que espera `signature.js`, el mismo script
        que captura la firma del emisor en /ajustes. Dos capturas de firma con
        comportamientos distintos serían dos formas de fallar. #}
-    <form method="post" action="/recibos/{{ receipt.id }}/firma" id="signature-form">
+    <form method="post" action="/recibos/{{ receipt.id }}/firma" id="signature-form" data-firma-obligatoria>
       <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
       <input type="hidden" name="signature_data" id="signature-data">
 
@@ -105,4 +170,5 @@
 {% block scripts %}
 <script src="/static/js/signature_pad.umd.min.js"></script>
 <script src="/static/js/signature.js"></script>
+<script src="/static/js/copiar.js"></script>
 {% endblock %}

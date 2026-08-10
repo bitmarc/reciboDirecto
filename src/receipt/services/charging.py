@@ -31,6 +31,7 @@ from receipt.domain.enums import CounterKind, PaymentMethod, ReceiptTemplate, Se
 from receipt.domain.money import format_pesos
 from receipt.models import Account, Client, IdempotencyKey, Payment, Receipt, Service
 from receipt.repositories import AccountScope
+from receipt.services.clients import create_client
 from receipt.services.counters import allocate_folio
 from receipt.services.errors import BusinessRuleViolation, ConflictError, ValidationError
 from receipt.services.receipts import issue_receipt
@@ -52,9 +53,16 @@ class ChargeRequest:
     texto a enteros ocurre en la capa web, y aquí llega el dato ya limpio.
     """
 
-    client_id: int
     payment_amount_cents: int
     method: PaymentMethod = PaymentMethod.CASH
+
+    # Cliente: o se elige del directorio, o se da de alta en el mismo envío.
+    # §6 lo pide así —"crear o seleccionar el cliente"— y §7.2 lo dibuja: dos
+    # campos, sin salir de la pantalla. Crearlo dentro de la transacción evita
+    # que un formulario abandonado deje clientes sueltos en el directorio.
+    client_id: int | None = None
+    new_client_name: str = ""
+    new_client_phone: str = ""
 
     # Trabajo: o se continúa uno abierto, o se crea uno nuevo (RN-16).
     service_id: int | None = None
@@ -82,6 +90,8 @@ class ChargeRequest:
         """
         payload = {
             "client_id": self.client_id,
+            "new_client_name": self.new_client_name,
+            "new_client_phone": self.new_client_phone,
             "payment_amount_cents": self.payment_amount_cents,
             "method": self.method.value,
             "service_id": self.service_id,
@@ -192,11 +202,29 @@ async def charge(scope: AccountScope, account: Account, request: ChargeRequest) 
 
 
 async def _resolve_client(scope: AccountScope, request: ChargeRequest) -> Client:
-    client = await scope.get(Client, request.client_id)
-    if client is None:
-        # Un cliente de otra cuenta y uno inexistente responden igual (AC-13).
-        raise ValidationError("Selecciona un cliente de tu directorio.")
-    return client
+    """Elige el cliente del directorio o lo da de alta en el mismo envío (§6).
+
+    El alta va aquí y no en una llamada aparte para que un formulario que se
+    abandona a medias no deje un cliente huérfano en el directorio.
+    """
+    if request.client_id is not None:
+        client = await scope.get(Client, request.client_id)
+        if client is None:
+            # Un cliente de otra cuenta y uno inexistente responden igual (AC-13).
+            raise ValidationError("Selecciona un cliente de tu directorio.")
+        return client
+
+    if request.new_client_name.strip() or request.new_client_phone.strip():
+        # `create_client` valida nombre y teléfono con las mismas reglas del
+        # directorio: el recibo dirá "Recibí de {cliente}" y un nombre de pila
+        # suelto no identifica a nadie meses después (§4.2).
+        return await create_client(
+            scope,
+            full_name=request.new_client_name,
+            phone=request.new_client_phone,
+        )
+
+    raise ValidationError("Elige un cliente o da de alta uno nuevo.")
 
 
 async def _resolve_service(

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Cobrar — Recibo{% endblock %}
+
+{# §7.2: una sola pantalla, un solo scroll, un solo botón de confirmación.
+   No hay wizard de varios pasos.
+
+   Lo que se revela y se oculta lo hace `cobrar.js` en el navegador. Lo único
+   que va al servidor antes de enviar es el buscador de clientes y la lista de
+   trabajos abiertos, por HTMX: son datos, no pasos (AC-19). #}
+
+{% block content %}
+<form method="post" action="/cobrar" id="cobro" class="cobro">
+  <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+  {# La genera el servidor al pintar la pantalla: el doble toque manda la misma
+     clave aunque el JavaScript no haya cargado (AC-18). #}
+  <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+
+  <!-- Bloque 1 — Cliente -->
+  <section class="card">
+    <h2>¿A quién le cobras?</h2>
+
+    <div data-cliente-buscador>
+      <input type="search" id="cliente-q" autocomplete="off"
+             placeholder="Busca por nombre o teléfono"
+             hx-get="/cobrar/clientes"
+             hx-trigger="input changed delay:250ms, search"
+             hx-target="#cliente-resultados"
+             name="q">
+      <div id="cliente-resultados"></div>
+
+      <button type="button" class="link-button" data-cliente-nuevo>
+        No está en mi lista: darlo de alta
+      </button>
+    </div>
+
+    {# Elegido desde el buscador. `cobrar.js` rellena el nombre y el id. #}
+    <div data-cliente-elegido hidden>
+      <p class="chosen">
+        <strong data-cliente-nombre></strong>
+        <button type="button" class="link-button" data-cliente-cambiar>Cambiar</button>
+      </p>
+    </div>
+    <input type="hidden" name="client_id" data-cliente-id value="{{ values.client_id or '' }}">
+
+    {# Alta en la misma pantalla, sin salir de ella (§7.2). Dos campos: el
+       recibo dice "Recibí de {cliente}" y necesita nombre y apellido. #}
+    <div data-cliente-alta hidden>
+      <label for="new_client_name">Nombre y apellido</label>
+      <input id="new_client_name" name="new_client_name" type="text"
+             placeholder="Ana Ramírez" value="{{ values.new_client_name or '' }}">
+      <label for="new_client_phone">Teléfono</label>
+      <input id="new_client_phone" name="new_client_phone" type="tel"
+             inputmode="tel" placeholder="55 1234 5678"
+             value="{{ values.new_client_phone or '' }}">
+    </div>
+  </section>
+
+  <!-- Bloque 2 — Trabajo -->
+  <section class="card">
+    <h2>¿Qué trabajo fue?</h2>
+
+    {# "Continuar un trabajo" solo aparece si el cliente tiene alguno abierto.
+       Lo inyecta `/cobrar/trabajos` al elegir cliente. #}
+    <div id="trabajos-abiertos"></div>
+
+    <div data-trabajo-nuevo>
+      <label for="concept">Concepto</label>
+      <input id="concept" name="concept" type="text"
+             placeholder="Instalación de contactos" value="{{ values.concept or '' }}">
+
+      <label for="location_alias">Lugar <span class="muted">(opcional)</span></label>
+      <input id="location_alias" name="location_alias" type="text"
+             placeholder="Casa Ramírez" value="{{ values.location_alias or '' }}">
+
+      <label for="location_address">Dirección <span class="muted">(opcional)</span></label>
+      <input id="location_address" name="location_address" type="text"
+             placeholder="{{ default_city }}"
+             value="{{ values.location_address or default_city }}">
+
+      <label class="checkbox">
+        <input type="checkbox" data-revela="#total-acordado"
+               {% if values.agreed_total %}checked{% endif %}>
+        Este trabajo tiene un total acordado
+      </label>
+
+      <div id="total-acordado" hidden>
+        <label for="agreed_total">Total acordado</label>
+        <input id="agreed_total" name="agreed_total" type="text"
+               inputmode="decimal" placeholder="2300" value="{{ values.agreed_total or '' }}">
+        {# RN-11: no hay endpoint de edición, ni lo habrá. #}
+        <p class="muted">Una vez guardado no se puede cambiar. Si después sube el
+          precio, se registra como trabajo adicional con su motivo.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bloque 3 — Pago -->
+  <section class="card">
+    <h2>¿Cuánto recibiste?</h2>
+
+    <label for="amount" class="sr-only">Monto recibido</label>
+    <input id="amount" name="amount" type="text" inputmode="decimal"
+           class="input--money" placeholder="0.00" required
+           value="{{ values.amount or '' }}" autocomplete="off">
+
+    <fieldset class="choice">
+      <legend class="sr-only">Método de pago</legend>
+      <label class="choice__option">
+        <input type="radio" name="method" value="cash"
+               {% if values.method != 'transfer' %}checked{% endif %}>
+        <span>Efectivo</span>
+      </label>
+      <label class="choice__option">
+        <input type="radio" name="method" value="transfer"
+               {% if values.method == 'transfer' %}checked{% endif %}>
+        <span>Transferencia</span>
+      </label>
+    </fieldset>
+
+    {# Colapsado a propósito: en el 90% de los casos no se toca (§7.2). #}
+    <button type="button" class="link-button" data-revela="#material">
+      Parte de este monto fue material
+    </button>
+    <div id="material" {% if not values.material %}hidden{% endif %}>
+      <label for="material_input">Monto de material</label>
+      <input id="material_input" name="material" type="text" inputmode="decimal"
+             placeholder="0.00" value="{{ values.material or '' }}">
+      {# RN-14: nunca aparece en el recibo. #}
+      <p class="muted">Solo para tu control. No aparece en el recibo del cliente.</p>
+    </div>
+  </section>
+
+  <!-- Bloque 4 — Firma -->
+  <section class="card">
+    <h2>Firma</h2>
+    <label class="checkbox">
+      <input type="checkbox" data-revela="#firma" id="pedir-firma">
+      Pedir firma al cliente
+    </label>
+
+    <div id="firma" hidden>
+      <label for="signer_capacity">Quién firma</label>
+      <select id="signer_capacity" name="signer_capacity">
+        {% for capacity in signer_capacities %}
+          <option value="{{ capacity.value }}">{{ calidad_firmante[capacity] }}</option>
+        {% endfor %}
+      </select>
+
+      {# §14.1: si firma el titular, el nombre se toma del recibo y no se teclea
+         nada. Un campo más frente a una puerta es un campo de más (§1.4). #}
+      <label for="signer_name">Nombre de quien firma</label>
+      <input id="signer_name" name="signer_name" type="text"
+             placeholder="Solo si no firma el titular">
+
+      <div class="signature-pad">
+        <canvas id="signature-canvas" aria-label="Área para que el cliente firme"></canvas>
+      </div>
+      <input type="hidden" name="signature_data" id="signature-data">
+      <button type="button" class="button button--secondary" id="signature-clear">
+        Borrar firma
+      </button>
+    </div>
+  </section>
+
+  {# Fijo al pie y ancho completo: es el único botón de la pantalla. #}
+  <div class="cobro__submit">
+    <button type="submit" class="button button--primary" data-enviar>Generar recibo</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/htmx.min.js"></script>
+<script src="/static/js/signature_pad.umd.min.js"></script>
+<script src="/static/js/signature.js"></script>
+<script src="/static/js/cobrar.js"></script>
+{% endblock %}

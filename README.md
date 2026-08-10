@@ -138,6 +138,20 @@ cada `AC`.
 - **Las imágenes del recibo van como `data:` URI, no como URL.** Es lo que
   WeasyPrint necesita, y además el contenedor es privado: una URL al blob no
   resolvería, y una que resolviera expondría un dato personal.
+- **`/cobrar` no usa Alpine, aunque §3.1 lo nombre.** Alpine 3 evalúa sus
+  expresiones con `new Function()`, y eso exige `unsafe-eval` en la CSP justo en
+  la pantalla que maneja los datos de cobro. `static/js/cobrar.js` hace lo mismo
+  en JavaScript plano, sin dependencias y sin tocar la CSP.
+- **La clave de idempotencia la genera el servidor** al pintar `/cobrar`, no el
+  navegador. Con mala señal, que es cuando se toca dos veces el botón, el
+  JavaScript es precisamente lo que puede no haber cargado.
+- **El alta de un cliente nuevo ocurre dentro de la transacción del cobro**
+  (§6), no en una llamada aparte: un formulario abandonado no deja clientes
+  sueltos en el directorio.
+- **Hay pruebas del contrato entre el JavaScript y las plantillas**
+  (`test_javascript_contract.py`). No hay navegador en la suite, así que un
+  atributo renombrado dejaría la pantalla muerta sin que fallara nada del
+  servidor. Nació de dos fallos reales al cablear `/cobrar`.
 - **Las rutas visibles van en español** (`/cobrar`, `/recibos`, `/clientes`),
   porque §0 exige que todo lo visible al usuario esté en español de México. La
   superficie en inglés de §6 del PRD queda como alias de redirección.
@@ -170,7 +184,7 @@ enchufa al desplegar, que es cuando el hito 4 también necesitará enviar recibo
 | 1 | Perfil del emisor, firma, logo, clientes, recuperación de contraseña | **Terminado** — media parte de `AC-02`; barrido de `AC-13` en marcha |
 | 2 | Motor de cobro: servicios, pagos, recibos, snapshot, folios, cancelación | **Terminado** — `AC-04` a `AC-09`, `AC-11` y `AC-16` pasan |
 | 3 | Plantilla del recibo, PDF, liga pública, firma del cliente | **Terminado** — `AC-02`, `AC-03`, `AC-10`, `AC-12` y `AC-14` pasan |
-| 4 | Pantalla de cobro e idempotencia, compartir | Pendiente |
+| 4 | Pantalla de cobro e idempotencia, compartir | **Terminado** — `AC-18` y `AC-19` pasan. **Entregable al usuario real** |
 | 5 | Contabilidad: panel, comparación mensual, quién me debe, CSV | Pendiente |
 | 6 | Planes, límites, cupones, pasarela | Pendiente |
 

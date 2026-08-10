@@ -46,7 +46,7 @@
     </figure>
   {% endif %}
 
-  <form method="post" action="/ajustes/firma" id="signature-form">
+  <form method="post" action="/ajustes/firma" id="signature-form" data-firma-obligatoria>
     <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
     <input type="hidden" name="signature_data" id="signature-data">
 
