@@ -64,7 +64,7 @@ src/receipt/
   services/      Casos de uso. Dueños de la transacción.
   security/      Argon2id, sesiones, CSRF, cabeceras, límite de intentos.
   web/           Rutas delgadas, plantillas Jinja2, estáticos.
-  infra/         Blob Storage, correo y, desde el hito 3, PDF.
+  infra/         Blob Storage, correo y PDF (WeasyPrint).
 ```
 
 `signature_pad` y `htmx` están vendorizados en `web/static/js/` con la versión
@@ -120,6 +120,24 @@ cada `AC`.
 - **El cupo del plan gratuito se cuenta por mes de emisión; el ingreso, por
   `paid_at`.** Son dos cortes distintos porque miden cosas distintas: `RN-33`
   acota cuántos recibos se generan, §9.1 cuánto se cobró.
+- **El PDF se genera bajo demanda y se cachea en el blob.** §6 dice "encolar",
+  pero no hay cola y montarla es alcance que el presupuesto no tiene. Generarlo
+  al emitir añadiría latencia al minuto de §1.4 y dejaría que un fallo del
+  renderizador tirase un cobro ya ocurrido. Cancelar o firmar sueltan
+  `pdf_blob_path`, así que la siguiente descarga regenera: un recibo cancelado
+  que circula en PDF sin sello es peor que no tener PDF.
+- **`/r/{token}` es la única consulta que no pasa por `AccountScope`.** Ahí no
+  hay sesión y el token *es* la credencial. Por eso lleva 32 bytes de entropía,
+  va limitada por IP contra la enumeración y un token inválido responde 404
+  indistinguible de uno inexistente.
+- **La plantilla del comprobante se escribe una vez** (`templates/receipt/`).
+  `_document.html` es el recibo; `public.html`, `pdf.html` y la ficha del emisor
+  solo lo envuelven. Dentro: tablas y bloques, nunca flexbox ni grid — WeasyPrint
+  soporta un subconjunto de CSS (§3.2). Una prueba comprueba que el documento no
+  se desborda a una segunda página.
+- **Las imágenes del recibo van como `data:` URI, no como URL.** Es lo que
+  WeasyPrint necesita, y además el contenedor es privado: una URL al blob no
+  resolvería, y una que resolviera expondría un dato personal.
 - **Las rutas visibles van en español** (`/cobrar`, `/recibos`, `/clientes`),
   porque §0 exige que todo lo visible al usuario esté en español de México. La
   superficie en inglés de §6 del PRD queda como alias de redirección.
@@ -151,7 +169,7 @@ enchufa al desplegar, que es cuando el hito 4 también necesitará enviar recibo
 | 0 | Cimientos: Docker, esquema completo, migraciones, autenticación, CI | **Terminado** — `AC-01` pasa |
 | 1 | Perfil del emisor, firma, logo, clientes, recuperación de contraseña | **Terminado** — media parte de `AC-02`; barrido de `AC-13` en marcha |
 | 2 | Motor de cobro: servicios, pagos, recibos, snapshot, folios, cancelación | **Terminado** — `AC-04` a `AC-09`, `AC-11` y `AC-16` pasan |
-| 3 | Plantilla del recibo, PDF, liga pública, firma del cliente | Pendiente |
+| 3 | Plantilla del recibo, PDF, liga pública, firma del cliente | **Terminado** — `AC-02`, `AC-03`, `AC-10`, `AC-12` y `AC-14` pasan |
 | 4 | Pantalla de cobro e idempotencia, compartir | Pendiente |
 | 5 | Contabilidad: panel, comparación mensual, quién me debe, CSV | Pendiente |
 | 6 | Planes, límites, cupones, pasarela | Pendiente |
@@ -164,7 +182,7 @@ veces al mes.
 
 | Sección | Tema | Estado |
 |---|---|---|
-| §14.1 | Firma de un tercero | **Resuelta**: se captura nombre y calidad de quien firma |
+| §14.1 | Firma de un tercero | **Resuelta e implementada**: se captura nombre y calidad de quien firma. Si firma el titular, el nombre se toma del recibo y no se teclea nada (§1.4) |
 | §14.4 | Frontend | **Resuelta**: Jinja2 + HTMX + Alpine, server-rendered |
 | RN-20 | "Firma capturada una sola vez" | **Resuelta**: se puede recapturar; "una sola vez" se opone a "cada vez que emites", no a "para siempre" |
 | §14.2 | Gracia tras borrado de cuenta | Abierta. Bloquea la publicación de términos, no el desarrollo |

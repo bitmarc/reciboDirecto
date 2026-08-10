@@ -72,6 +72,12 @@ class Receipt(Base, PrimaryKeyMixin):
     """§14.1, resuelto: se captura quién firmó y en qué calidad. Sin este dato se
     reproduce el problema de "yo no fui" cuando firma un tercero."""
 
+    client_signature_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    """§8.1 imprime la firma del cliente **con fecha y hora**, y no puede tomarla
+    de `issued_at`: la firma se captura al entregar el comprobante, que no
+    siempre es el instante de emitirlo. Sin esta columna no habría fecha que
+    imprimir."""
+
     status: Mapped[ReceiptStatus] = mapped_column(
         pg_enum(ReceiptStatus, "receipt_status"),
         default=ReceiptStatus.ISSUED,

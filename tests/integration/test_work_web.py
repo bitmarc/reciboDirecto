@@ -16,7 +16,7 @@ from receipt.models import Account, Client
 from receipt.repositories import AccountScope
 from receipt.services.charging import ChargeRequest, charge
 from receipt.services.work import load_totals
-from tests.conftest import csrf_token_of, visible_text
+from tests.conftest import csrf_token_of, document_text, visible_text
 from tests.factories import make_client
 
 pytestmark = pytest.mark.db
@@ -233,7 +233,14 @@ class TestAc02And03TheReceiptDoesNotFollowLaterEdits:
     async def test_renaming_the_client_does_not_change_the_receipt(
         self, signed_in: AsyncClient, scope: AccountScope, customer: Client, cobro
     ) -> None:
-        """`AC-03`. La página lee el snapshot, no la tabla viva."""
+        """`AC-03`. El comprobante lee el snapshot, no la tabla viva.
+
+        La ficha del emisor muestra además un enlace de navegación al cliente
+        **actual**, y ese sí lleva el nombre nuevo. No es una fuga de `AC-03`:
+        el criterio habla del recibo, y el recibo es el documento. Ver los dos
+        nombres juntos es justamente lo que le dice al emisor que se trata de la
+        misma persona, ahora renombrada.
+        """
         from receipt.services.clients import update_client
 
         await update_client(
@@ -242,8 +249,8 @@ class TestAc02And03TheReceiptDoesNotFollowLaterEdits:
 
         response = await signed_in.get(f"/recibos/{cobro.receipt.id}")
 
-        assert "Ana Ramírez" in visible_text(response)
-        assert "Ana María Ramírez Torres" not in visible_text(response)
+        assert "Recibí de Ana Ramírez" in document_text(response), "el comprobante no cambió"
+        assert f'href="/clientes/{customer.id}"' in response.text, "el enlace vivo sigue ahí"
 
     async def test_changing_the_issuer_phone_does_not_change_the_receipt(
         self, signed_in: AsyncClient, account: Account, cobro

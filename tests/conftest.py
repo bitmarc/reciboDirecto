@@ -21,6 +21,7 @@ vea los datos de otra.
 """
 
 import os
+import re
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
@@ -63,7 +64,13 @@ from receipt.db import get_db_session  # noqa: E402
 from receipt.infra.blob import BlobStore, get_blob_store, reset_blob_store  # noqa: E402
 from receipt.infra.mail import RecordingMailer, get_mailer, set_mailer  # noqa: E402
 from receipt.main import create_app  # noqa: E402
-from receipt.web.dependencies import auth_limiter  # noqa: E402
+from receipt.security.rate_limit import clear_all  # noqa: E402
+
+# `web.dependencies` construye los limitadores en tiempo de importación y los
+# deja registrados, que es lo que `clear_all()` necesita encontrar. `create_app`
+# ya lo importa, pero dejarlo explícito evita que un refactor lo desconecte en
+# silencio y la suite se vuelva intermitente.
+from receipt.web import dependencies as _dependencies  # noqa: E402, F401
 
 # --------------------------------------------------------------------------
 # Base de datos
@@ -148,14 +155,17 @@ def mailer() -> Iterator[RecordingMailer]:
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter() -> Iterator[None]:
-    """El limitador es estado global del proceso.
+    """Los limitadores son estado global del proceso.
 
-    Sin limpiarlo, unas pruebas de login harían fallar a las siguientes por
-    haber agotado el cupo.
+    Sin limpiarlos, unas pruebas de login harían fallar a las siguientes por
+    haber agotado el cupo. Se limpian **todos** por registro y no uno por uno:
+    el limitador de la liga pública se agregó en el hito 3, y descubrir semanas
+    después que la suite se volvió intermitente por no haberlo añadido aquí es
+    un fallo caro de diagnosticar.
     """
-    auth_limiter.clear()
+    clear_all()
     yield
-    auth_limiter.clear()
+    clear_all()
 
 
 @pytest.fixture
@@ -204,6 +214,22 @@ def visible_text(response: object) -> str:
     se está probando.
     """
     return " ".join(response.text.split())  # type: ignore[attr-defined]
+
+
+_MARKUP = re.compile(r"<[^>]+>")
+_NON_TEXT = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE)
+
+
+def document_text(response: object) -> str:
+    """Lo que una persona lee en la página: sin etiquetas, sin CSS, sin scripts.
+
+    `visible_text` conserva el marcado, así que una frase partida por una
+    etiqueta —«Recibí de <span>Ana Ramírez</span>»— no aparece como subcadena
+    aunque en pantalla se lea entera. Para probar el copy del comprobante hace
+    falta lo que se lee, no lo que se sirve.
+    """
+    raw: str = response.text  # type: ignore[attr-defined]
+    return " ".join(_MARKUP.sub(" ", _NON_TEXT.sub(" ", raw)).split())
 
 
 def csrf_token_of(http: AsyncClient) -> str:

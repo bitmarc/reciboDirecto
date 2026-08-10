@@ -38,6 +38,14 @@ class Settings(BaseSettings):
     login_max_attempts: int = 8
     login_window_seconds: int = 300
 
+    # §10 exige limitar `/r/{token}` para impedir enumeración por fuerza bruta.
+    # El cupo es holgado a propósito: un cliente abre su recibo un par de veces
+    # y a veces varios clientes comparten la IP de una red móvil. Con 32 bytes
+    # de entropía en el token, el límite no es la única defensa — solo encarece
+    # el barrido hasta volverlo inútil.
+    public_receipt_max_requests: int = 60
+    public_receipt_window_seconds: int = 60
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"

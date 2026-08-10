@@ -8,11 +8,12 @@ RN-34: el logo solo se aplica en plan de pago.
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from receipt.domain.enums import Plan
+from receipt.domain.clock import now_utc
+from receipt.domain.enums import Plan, ReceiptStatus, SignerCapacity
 from receipt.domain.images import ImageRejected, logo_png, signature_png_from_data_uri
 from receipt.infra.blob import BlobStore, new_path
-from receipt.models import Account
-from receipt.services.errors import BusinessRuleViolation, ValidationError
+from receipt.models import Account, Receipt
+from receipt.services.errors import BusinessRuleViolation, ConflictError, ValidationError
 
 
 async def store_signature(
@@ -61,6 +62,54 @@ async def store_logo(
 
     path = await blobs.upload(new_path("logo", account.id), png)
     account.logo_blob_path = path
+    await session.flush()
+    return path
+
+
+async def store_client_signature(
+    session: AsyncSession,
+    blobs: BlobStore,
+    receipt: Receipt,
+    *,
+    data_uri: str,
+    signer_name: str = "",
+    capacity: SignerCapacity = SignerCapacity.HOLDER,
+) -> str:
+    """Estampa la firma del cliente en un recibo (RN-21, §14.1).
+
+    Es **opcional** y la decide el emisor recibo por recibo: es evidencia de
+    entrega, no validación legal. Por eso vive en su propia columna y no en el
+    `snapshot` — no es contenido del comprobante, y añadirla después no
+    reescribe nada (RN-10).
+
+    §14.1, resuelto: se guarda **quién firmó y en qué calidad**. Cuando firma el
+    titular no se pide teclear nada: el nombre se toma del propio recibo, porque
+    exigir un campo más frente a la puerta de una casa es justo lo que §1.4
+    prohíbe. Cuando firma un tercero, el nombre es obligatorio; sin él se
+    reproduce el "yo no fui" que motiva pedir la firma.
+    """
+    if receipt.status is ReceiptStatus.CANCELLED:
+        raise ConflictError("Este recibo está cancelado: ya no puede firmarse.")
+
+    name = " ".join(signer_name.split())
+    if capacity is SignerCapacity.HOLDER and not name:
+        name = (receipt.snapshot or {}).get("client", {}).get("full_name", "")
+    if not name:
+        raise ValidationError("Escribe el nombre de quien está firmando.")
+
+    try:
+        png = signature_png_from_data_uri(data_uri)
+    except ImageRejected as exc:
+        raise ValidationError(str(exc)) from exc
+
+    # Ruta nueva siempre. Volver a firmar —una captura salió mal, cosa normal
+    # en un canvas sostenido con una mano— no destruye la anterior.
+    path = await blobs.upload(new_path("signature", receipt.account_id), png)
+
+    receipt.client_signature_blob_path = path
+    receipt.client_signature_signer_name = name
+    receipt.client_signature_signer_capacity = capacity
+    receipt.client_signature_signed_at = now_utc()
     await session.flush()
     return path
 

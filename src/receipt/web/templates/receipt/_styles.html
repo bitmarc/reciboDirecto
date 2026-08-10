@@ -1,0 +1,138 @@
+{# Estilos del comprobante. Se incluyen en el <head> de los tres destinos:
+   la página pública, el PDF y la ficha del emisor (§3.2).
+
+   RESTRICCIÓN QUE NO SE NEGOCIA: WeasyPrint soporta un subconjunto de CSS.
+   Aquí solo hay tablas y bloques — nada de flexbox ni grid. La maquetación de
+   dos columnas de la cabecera y del pie se hace con `<table>`, que es lo que
+   §3.2 indica y lo único que renderiza igual en pantalla y en papel. #}
+<style>
+  @page {
+    /* Carta, no A4: es el tamaño de papel de México. */
+    size: Letter;
+    margin: 16mm;
+  }
+
+  .receipt {
+    --rc-ink: #16181d;
+    --rc-soft: #5b6472;
+    --rc-line: #d7dce4;
+    --rc-accent: #0f5132;
+    --rc-danger: #b42318;
+
+    max-width: 176mm;
+    margin: 0 auto;
+    padding: 8mm;
+    background: #fff;
+    color: var(--rc-ink);
+    font-family: "DejaVu Sans", "Helvetica", "Arial", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  .receipt table { width: 100%; border-collapse: collapse; }
+  .receipt td, .receipt th { vertical-align: top; text-align: left; }
+
+  /* Cabecera --------------------------------------------------------- */
+
+  .rc-head { border-bottom: 2px solid var(--rc-ink); padding-bottom: 4mm; }
+  .rc-head__right { text-align: right; width: 45%; }
+  .rc-logo { max-height: 18mm; max-width: 55mm; margin-bottom: 2mm; }
+  .rc-issuer { font-size: 13pt; font-weight: 700; }
+  .rc-occupation, .rc-phone { color: var(--rc-soft); font-size: 9.5pt; }
+  .rc-place { font-size: 9.5pt; }
+
+  .rc-title {
+    margin-top: 1mm;
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .rc-folio { font-size: 14pt; font-weight: 700; }
+  .rc-service-code { color: var(--rc-soft); font-size: 9.5pt; }
+
+  /* Cuerpo ----------------------------------------------------------- */
+
+  .rc-body { padding: 6mm 0 4mm; }
+  .rc-received { font-size: 11pt; }
+  .rc-client { font-weight: 700; }
+  .rc-concept { margin-top: 2mm; }
+  .rc-location { color: var(--rc-soft); font-size: 9.5pt; margin-top: 1mm; }
+
+  .rc-single-amount {
+    margin: 5mm 0 2mm;
+    padding: 4mm;
+    border: 1px solid var(--rc-line);
+    font-size: 12pt;
+  }
+  .rc-single-amount strong { font-size: 15pt; }
+  .rc-in-words {
+    color: var(--rc-soft);
+    font-size: 9pt;
+    text-transform: uppercase;
+    margin-top: 1mm;
+  }
+
+  /* Tabla de montos (§8.3) ------------------------------------------- */
+
+  .rc-amounts { margin-top: 4mm; }
+  .rc-amounts td { padding: 2.2mm 0; border-bottom: 1px solid var(--rc-line); }
+  .rc-amounts td:last-child { text-align: right; white-space: nowrap; }
+  .rc-amounts .rc-row--strong td { font-weight: 700; }
+  .rc-amounts .rc-row--total td {
+    font-weight: 700;
+    font-size: 12pt;
+    border-bottom: 2px solid var(--rc-ink);
+    border-top: 1px solid var(--rc-ink);
+  }
+  .rc-amounts .rc-reason { color: var(--rc-soft); font-size: 9.5pt; }
+  .rc-settled { color: var(--rc-accent); font-weight: 700; }
+
+  /* Pie -------------------------------------------------------------- */
+
+  .rc-foot { margin-top: 10mm; }
+  .rc-sign { width: 50%; padding-right: 6mm; }
+  .rc-sign img { max-height: 20mm; max-width: 60mm; }
+  .rc-sign__rule { border-top: 1px solid var(--rc-ink); margin-top: 2mm; padding-top: 1.5mm; }
+  .rc-sign__label { font-size: 9pt; color: var(--rc-soft); }
+  .rc-sign__name { font-size: 9.5pt; font-weight: 700; }
+  .rc-sign__empty { height: 20mm; }
+
+  .rc-legal {
+    margin-top: 8mm;
+    padding-top: 3mm;
+    border-top: 1px solid var(--rc-line);
+    color: var(--rc-soft);
+    font-size: 8.5pt;
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* Sello de cancelado (RN-24) ---------------------------------------- */
+
+  /* El contenido se atenúa y el sello va arriba (§7.3). Sin `position:
+     absolute` girado: WeasyPrint lo soporta a medias y un sello mal colocado
+     sobre un comprobante cancelado es peor que uno recto y evidente. */
+  .receipt--cancelled .rc-head,
+  .receipt--cancelled .rc-body,
+  .receipt--cancelled .rc-foot { opacity: 0.45; }
+
+  .rc-cancelled {
+    border: 3px solid var(--rc-danger);
+    color: var(--rc-danger);
+    padding: 4mm;
+    margin-bottom: 6mm;
+    text-align: center;
+  }
+  .rc-cancelled__seal {
+    font-size: 20pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+  }
+  .rc-cancelled__detail { font-size: 9.5pt; margin-top: 1.5mm; }
+
+  @media print {
+    .receipt { max-width: none; padding: 0; margin: 0; }
+    .no-print { display: none !important; }
+  }
+</style>

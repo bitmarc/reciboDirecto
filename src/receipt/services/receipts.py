@@ -37,6 +37,7 @@ from receipt.models import Account, Client, Payment, Receipt, Service, ServiceAd
 from receipt.repositories import AccountScope
 from receipt.services.clients import folded, normalize_name
 from receipt.services.counters import allocate_folio
+from receipt.services.documents import invalidate_pdf
 from receipt.services.errors import ConflictError, ValidationError
 from receipt.services.usage import record_issuance
 from receipt.services.work import refresh_status
@@ -147,6 +148,11 @@ async def cancel_receipt(scope: AccountScope, receipt: Receipt, *, reason: str) 
     receipt.status = ReceiptStatus.CANCELLED
     receipt.cancelled_at = now_utc()
     receipt.cancellation_reason = cleaned
+
+    # RN-24: el sello tiene que verse. El PDF ya generado no lo lleva, así que se
+    # suelta la ruta y la siguiente descarga regenera con él. Un comprobante
+    # anulado que se ve válido circulando en PDF es peor que no tener PDF.
+    invalidate_pdf(receipt)
 
     payment = await scope.get(Payment, receipt.payment_id)
     if payment is None:  # pragma: no cover - la FK lo impide

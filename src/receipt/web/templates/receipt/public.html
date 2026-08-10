@@ -1,0 +1,69 @@
+{# Página pública del recibo — `/r/{token}` (§7.3).
+
+   No extiende `base.html` a propósito: aquí no hay sesión, ni barra de
+   navegación, ni nada que sugiera que el cliente tiene cuenta. §1.5 es
+   explícito — el cliente del emisor no instala nada, no crea cuenta y no hace
+   nada desde su celular más que abrir esta página.
+
+   Sin analíticas de terceros y sin cookies (§7.3, §10). #}
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# §7.3: la liga no debe indexarse. La cabecera X-Robots-Tag lo repite, porque
+     el PDF no tiene <head> donde poner esto. #}
+  <meta name="robots" content="noindex, nofollow">
+  <title>Recibo {{ doc.receipt.folio }} — {{ doc.snapshot.issuer.display_name }}</title>
+  {% include "receipt/_styles.html" %}
+  <style>
+    body {
+      margin: 0;
+      padding: 4mm 3mm 12mm;
+      background: #eef1f5;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+    }
+    .rc-page { max-width: 200mm; margin: 0 auto; }
+    .receipt { box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12); }
+    .rc-actions { max-width: 200mm; margin: 5mm auto 0; text-align: center; }
+    .rc-download {
+      display: block;
+      padding: 1rem;
+      background: #16181d;
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.0625rem;
+      font-weight: 600;
+      border-radius: 8px;
+      /* Objetivo grande: se abre desde un celular, en la calle. */
+      min-height: 3rem;
+    }
+    .rc-keep {
+      margin: 4mm auto 0;
+      max-width: 150mm;
+      color: #5b6472;
+      font-size: 0.9375rem;
+      text-align: center;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .receipt { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="rc-page">
+    {% include "receipt/_document.html" %}
+  </div>
+
+  <div class="rc-actions no-print">
+    <a class="rc-download" href="/r/{{ doc.receipt.public_token }}/pdf">Descargar PDF</a>
+    {# §7.3, textual. El comprobante vive mientras exista la cuenta (RN-30),
+       pero la copia propia es lo que de verdad protege al cliente. #}
+    <p class="rc-keep">
+      Guarda tu copia. Este comprobante está disponible en línea, pero te
+      recomendamos descargarlo.
+    </p>
+  </div>
+</body>
+</html>

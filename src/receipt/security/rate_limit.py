@@ -16,12 +16,29 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 
+_LIMITERS: list["RateLimiter"] = []
+
+
+def clear_all() -> None:
+    """Olvida los intentos de **todos** los limitadores del proceso.
+
+    Existe para la suite: el estado es global y, sin limpiarlo entre pruebas,
+    unas hacen fallar a las siguientes por haber agotado el cupo. El registro
+    evita el fallo clásico de agregar un limitador nuevo y descubrir semanas
+    después que la suite se volvió intermitente por no haberlo añadido a mano.
+    """
+    for limiter in _LIMITERS:
+        limiter.clear()
+
 
 @dataclass
 class RateLimiter:
     max_attempts: int
     window_seconds: int
     _attempts: dict[str, deque[float]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _LIMITERS.append(self)
 
     def _purge(self, key: str, now: float) -> deque[float]:
         window = self._attempts.setdefault(key, deque())

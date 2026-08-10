@@ -96,6 +96,14 @@ auth_limiter = RateLimiter(
     window_seconds=_settings.login_window_seconds,
 )
 
+# §10: la liga pública se limita aparte, para impedir la enumeración de tokens
+# por fuerza bruta. No comparte cupo con el login porque los dos flujos no se
+# parecen en nada: quien abre su recibo no está probando credenciales.
+public_receipt_limiter = RateLimiter(
+    max_attempts=_settings.public_receipt_max_requests,
+    window_seconds=_settings.public_receipt_window_seconds,
+)
+
 
 def client_ip(request: Request) -> str | None:
     """IP del cliente, respetando el proxy de App Service.

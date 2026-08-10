@@ -1,0 +1,21 @@
+{# Envoltorio del PDF. Es el mismo documento que la página pública y la ficha
+   del emisor: lo único que cambia es que aquí no hay cromo alrededor (§3.2).
+
+   Ninguna referencia externa. WeasyPrint renderiza sin `base_url`, así que un
+   `<link>` o un `<img src="/algo">` no resolvería; las imágenes ya vienen como
+   `data:` URI desde `services/rendering.py`. #}
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <title>Recibo {{ doc.receipt.folio }}</title>
+  {% include "receipt/_styles.html" %}
+  <style>
+    /* En papel el documento ya está dentro del margen de @page. */
+    .receipt { max-width: none; margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  {% include "receipt/_document.html" %}
+</body>
+</html>

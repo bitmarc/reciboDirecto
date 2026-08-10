@@ -1,0 +1,174 @@
+{# EL comprobante. Una sola implementación para la página pública, el PDF y la
+   impresión (§3.2). Si aquí hay una divergencia, hay tres.
+
+   Todo el contenido sale de `doc.snapshot`. Del registro vivo se leen solo el
+   folio, el estado —la excepción declarada en §4.3, para el sello de RN-24— y
+   la firma del cliente, que es evidencia de entrega capturada después de
+   emitir.
+
+   El material NUNCA aparece (RN-14): el snapshot no lo contiene, así que no hay
+   forma de imprimirlo aunque se quisiera. #}
+
+{% set amounts = doc.amounts %}
+{% set snapshot = doc.snapshot %}
+
+<article class="receipt {% if doc.is_cancelled %}receipt--cancelled{% endif %}">
+
+  {% if doc.is_cancelled %}
+    <div class="rc-cancelled">
+      <div class="rc-cancelled__seal">CANCELADO</div>
+      <div class="rc-cancelled__detail">
+        {% if doc.cancelled_at_text %}El {{ doc.cancelled_at_text }}.{% endif %}
+        Motivo: {{ doc.receipt.cancellation_reason }}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Cabecera (§8.1) — dos columnas con tabla, no con flexbox. #}
+  <table class="rc-head">
+    <tr>
+      <td>
+        {% if doc.logo_data_uri %}
+          <img class="rc-logo" src="{{ doc.logo_data_uri }}" alt="">
+        {% endif %}
+        <div class="rc-issuer">{{ snapshot.issuer.display_name }}</div>
+        {% if snapshot.issuer.occupation %}
+          <div class="rc-occupation">{{ snapshot.issuer.occupation }}</div>
+        {% endif %}
+        <div class="rc-phone">Tel. {{ snapshot.issuer.phone }}</div>
+      </td>
+      <td class="rc-head__right">
+        <div class="rc-place">{{ doc.issued_on_text }}</div>
+        <div class="rc-title">Recibo de pago</div>
+        <div class="rc-folio">{{ doc.receipt.folio }}</div>
+        <div class="rc-service-code">Trabajo {{ snapshot.service.code }}</div>
+      </td>
+    </tr>
+  </table>
+
+  {# Cuerpo (§8.1) #}
+  <div class="rc-body">
+    <div class="rc-received">
+      Recibí de <span class="rc-client">{{ snapshot.client.full_name }}</span>
+    </div>
+
+    <div class="rc-concept">
+      Por concepto de: {{ snapshot.service.concept_line or snapshot.service.concept }}
+    </div>
+
+    {% if snapshot.service.location_alias or snapshot.service.location_address %}
+      <div class="rc-location">
+        Lugar del trabajo:
+        {{ snapshot.service.location_alias or '' }}
+        {%- if snapshot.service.location_alias and snapshot.service.location_address %} — {% endif -%}
+        {{ snapshot.service.location_address or '' }}
+      </div>
+    {% endif %}
+
+    {% if doc.paid_on_text %}
+      <div class="rc-location">Fecha del pago: {{ doc.paid_on_text }}</div>
+    {% endif %}
+
+    {% if doc.receipt.template.value == 'single' %}
+      {# §8.2 — pago único: una línea de monto más el monto en letra. #}
+      <div class="rc-single-amount">
+        Recibí la cantidad de <strong>{{ amounts.payment_cents | pesos }}</strong>
+        <div class="rc-in-words">({{ amounts.payment_cents | pesos_en_letra }})</div>
+      </div>
+      <div class="rc-location">Forma de pago: {{ metodo_pago.get(snapshot.method, snapshot.method) }}</div>
+    {% else %}
+      {# §8.3 — tabla de montos, en este orden exacto. #}
+      <table class="rc-amounts">
+        {% if amounts.agreed_total_cents is not none %}
+          <tr>
+            <td>Total acordado</td>
+            <td>{{ amounts.agreed_total_cents | pesos }}</td>
+          </tr>
+        {% endif %}
+
+        {% for adjustment in amounts.adjustments %}
+          <tr>
+            <td>
+              Trabajo adicional
+              <div class="rc-reason">{{ adjustment.reason }}</div>
+            </td>
+            <td>{{ adjustment.amount_cents | pesos }}</td>
+          </tr>
+        {% endfor %}
+
+        {% if amounts.adjustments and amounts.current_total_cents is not none %}
+          <tr class="rc-row--strong">
+            <td>Total vigente</td>
+            <td>{{ amounts.current_total_cents | pesos }}</td>
+          </tr>
+        {% endif %}
+
+        {% if amounts.previous_paid_cents %}
+          <tr>
+            <td>Pagos anteriores</td>
+            <td>{{ amounts.previous_paid_cents | pesos }}</td>
+          </tr>
+        {% endif %}
+
+        <tr class="rc-row--strong">
+          <td>Pago recibido hoy ({{ metodo_pago.get(snapshot.method, snapshot.method) | lower }})</td>
+          <td>{{ amounts.payment_cents | pesos }}</td>
+        </tr>
+
+        <tr>
+          <td>Pagado acumulado</td>
+          <td>{{ amounts.accumulated_paid_cents | pesos }}</td>
+        </tr>
+
+        {% if amounts.balance_cents is not none %}
+          <tr class="rc-row--total">
+            <td>Saldo pendiente</td>
+            <td>
+              {% if amounts.balance_cents == 0 %}
+                <span class="rc-settled">{{ 0 | pesos }} · Liquidado</span>
+              {% else %}
+                {{ amounts.balance_cents | pesos }}
+              {% endif %}
+            </td>
+          </tr>
+        {% endif %}
+      </table>
+    {% endif %}
+  </div>
+
+  {# Pie (§8.1) — firma del emisor siempre; la del cliente solo si se pidió. #}
+  <table class="rc-foot">
+    <tr>
+      <td class="rc-sign">
+        {% if doc.issuer_signature_data_uri %}
+          <img src="{{ doc.issuer_signature_data_uri }}" alt="">
+        {% else %}
+          <div class="rc-sign__empty"></div>
+        {% endif %}
+        <div class="rc-sign__rule">
+          <div class="rc-sign__name">{{ snapshot.issuer.display_name }}</div>
+          <div class="rc-sign__label">Firma de quien recibe el pago</div>
+        </div>
+      </td>
+
+      <td class="rc-sign">
+        {% if doc.client_signature_data_uri %}
+          <img src="{{ doc.client_signature_data_uri }}" alt="">
+          <div class="rc-sign__rule">
+            <div class="rc-sign__name">
+              {{ doc.receipt.client_signature_signer_name or snapshot.client.full_name }}
+            </div>
+            {# §14.1: quién firmó y en qué calidad. Sin este dato se reproduce el
+               "yo no fui" cuando firma un tercero. #}
+            <div class="rc-sign__label">
+              {{ calidad_firmante.get(doc.receipt.client_signature_signer_capacity, 'Conformidad de entrega') }}
+              {% if doc.client_signed_at_text %} · {{ doc.client_signed_at_text }}{% endif %}
+            </div>
+          </div>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <div class="rc-legal">{{ leyenda_legal }}</div>
+</article>
