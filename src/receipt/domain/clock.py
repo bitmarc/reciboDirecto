@@ -85,10 +85,50 @@ def recent_periods(period: str, count: int) -> list[str]:
     return [shift_period(period, offset) for offset in range(-(count - 1), 1)]
 
 
+def days_between(start: datetime, end: datetime) -> int:
+    """Días completos entre dos instantes, contados sobre el calendario local.
+
+    La antigüedad de un adeudo se cuenta en días de calendario y no en periodos
+    de 24 horas: un trabajo de ayer por la noche tiene un día, no cero.
+    """
+    return (to_local(end).date() - to_local(start).date()).days
+
+
+def format_age_es(days: int) -> str:
+    """Antigüedad de un adeudo, en palabras (§7.4).
+
+    Hasta dos meses se dicen los días, porque es el plazo en que el emisor aún
+    recuerda el trabajo. Más allá, el número exacto deja de importar y lo que
+    pesa es el "van tres meses" que hace incómoda la llamada de cobro.
+    """
+    if days <= 0:
+        return "hoy"
+    if days == 1:
+        return "1 día"
+    if days < 60:
+        return f"{days} días"
+    return f"{days // 30} meses"
+
+
 def format_long_date_es(moment: datetime) -> str:
     """Fecha de emisión del recibo: "7 de julio de 2026" (§8.1)."""
     local = to_local(moment)
     return f"{local.day} de {_MONTHS_ES[local.month - 1]} de {local.year}"
+
+
+def format_month_es(period: str) -> str:
+    """`"2026-07"` → `"julio de 2026"`. Encabeza el panel y el reporte."""
+    year, month = parse_period(period)
+    return f"{_MONTHS_ES[month - 1]} de {year}"
+
+
+def format_local_date(moment: datetime) -> str:
+    """`"2026-07-31"` en hora de CDMX: la fecha de corte del CSV (§9.2).
+
+    En ISO y no en `31/07/2026` porque así ordena bien en cualquier hoja de
+    cálculo y no se confunde con el formato de otro país.
+    """
+    return f"{to_local(moment):%Y-%m-%d}"
 
 
 def format_datetime_es(moment: datetime) -> str:

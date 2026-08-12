@@ -14,7 +14,16 @@ from receipt.db import dispose_engine
 from receipt.logging_config import configure_logging
 from receipt.security.headers import SecurityHeadersMiddleware
 from receipt.web.dependencies import NotAuthenticated, redirect_to_login
-from receipt.web.routes import auth, charge, clients, pages, public, receipts, work
+from receipt.web.routes import (
+    auth,
+    charge,
+    clients,
+    pages,
+    public,
+    receipts,
+    reports,
+    work,
+)
 from receipt.web.routes import settings as settings_routes
 from receipt.web.templating import STATIC_DIR
 
@@ -49,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(charge.router)
     app.include_router(work.router)
     app.include_router(receipts.router)
+    app.include_router(reports.router)
     # La liga pública no lleva sesión ni CSRF: el token es la credencial (§3.3).
     app.include_router(public.router)
     # Las páginas van al final: registran los alias de §6, que son comodines

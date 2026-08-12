@@ -11,7 +11,14 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 from starlette.responses import Response
 
-from receipt.domain.clock import format_datetime_es, format_long_date_es, to_local
+from receipt.domain.clock import (
+    format_age_es,
+    format_datetime_es,
+    format_local_date,
+    format_long_date_es,
+    format_month_es,
+    to_local,
+)
 from receipt.domain.money import amount_in_words, format_pesos
 from receipt.security.csrf import CSRF_FIELD_NAME
 from receipt.security.sessions import read_session
@@ -28,13 +35,18 @@ templates.env.globals["estado_trabajo"] = labels.SERVICE_STATUS
 templates.env.globals["estado_recibo"] = labels.RECEIPT_STATUS
 templates.env.globals["estado_pago"] = labels.PAYMENT_STATUS
 templates.env.globals["metodo_pago"] = labels.PAYMENT_METHOD_BY_VALUE
+templates.env.globals["metodo_pago_enum"] = labels.PAYMENT_METHOD
+templates.env.globals["estado_contable"] = labels.accounting_status
 templates.env.globals["calidad_firmante"] = labels.SIGNER_CAPACITY
 templates.env.globals["leyenda_legal"] = labels.LEGAL_NOTICE
 templates.env.filters["pesos"] = format_pesos
 templates.env.filters["pesos_en_letra"] = amount_in_words
 templates.env.filters["fecha_larga"] = format_long_date_es
 templates.env.filters["fecha_hora"] = format_datetime_es
+templates.env.filters["fecha_corta"] = format_local_date
 templates.env.filters["hora_local"] = to_local
+templates.env.filters["mes"] = format_month_es
+templates.env.filters["antiguedad"] = format_age_es
 
 
 def render_receipt_pdf_html(document: object) -> str:

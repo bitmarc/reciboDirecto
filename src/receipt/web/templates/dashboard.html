@@ -2,17 +2,85 @@
 {% block title %}Panel — Recibo{% endblock %}
 
 {% block content %}
-<section class="card">
+<div class="page-head">
   <h1>Hola, {{ account.display_name }}</h1>
+  <a class="button button--primary button--inline" href="/cobrar">Cobrar</a>
+</div>
 
-  {# El panel real llega en el hito 5. Hasta entonces esta pantalla solo
-     confirma que la sesión funciona: el producto se valida por la pantalla de
-     cobro, no por el panel (§15). #}
-  <p class="muted">
-    El panel de ingresos llega en el hito 5. Por ahora, el flujo que importa es
-    el de cobro.
-  </p>
-
-  <a class="button button--primary" href="/cobrar">Cobrar</a>
+{# §7.4: el panel responde dos preguntas, en este orden y con este peso
+   visual. Todo lo que viene después va debajo y más chico, a propósito. #}
+<section class="card figure">
+  <p class="figure__label">Ganado en {{ overview.label }}</p>
+  <p class="figure__amount">{{ overview.income_cents | pesos }}</p>
+  <p class="muted">Ya descontado el material y sin recibos cancelados, contado por fecha de pago.</p>
 </section>
+
+<section class="card figure">
+  <p class="figure__label">Por cobrar</p>
+  <p class="figure__amount">{{ overview.receivable_cents | pesos }}</p>
+  <p class="muted">La suma de los saldos de tus trabajos abiertos.</p>
+</section>
+
+<section class="card">
+  <h2>Los últimos seis meses</h2>
+  {# Gráfica sin JS: barras de ancho porcentual. La CSP no admite scripts de
+     terceros (§10) y seis barras no justifican una librería. #}
+  <ul class="chart">
+    {% for month in overview.months %}
+      <li class="chart__row{% if month.is_current %} chart__row--current{% endif %}">
+        <span class="chart__head">
+          <span class="chart__label">{{ month.label }}</span>
+          <span class="chart__value">{{ month.income_cents | pesos }}</span>
+        </span>
+        <span class="chart__track">
+          {# Un mes en cero no dibuja barra: el carril vacío es el dato. #}
+          {% if month.percentage %}
+            <span class="chart__bar" style="width: {{ month.percentage }}%"></span>
+          {% endif %}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+  <p class="muted">
+    <a href="/reportes?periodo={{ overview.period }}">Ver el detalle de {{ overview.label }}</a>
+  </p>
+</section>
+
+<section class="card">
+  <h2>Quién me debe</h2>
+  {% if overview.debtors %}
+    {# Ordenada por antigüedad descendente (§7.4): el adeudo más viejo arriba,
+       porque es el que más cuesta cobrar y el que más fácil se olvida. #}
+    <ul class="list">
+      {% for debtor in overview.debtors %}
+        <li class="list__item">
+          <a href="/clientes/{{ debtor.client.id }}">
+            <span class="list__title">{{ debtor.balance_cents | pesos }}</span>
+            <span class="list__meta">{{ debtor.client.full_name }}</span>
+            <span class="list__meta">
+              {{ debtor.days | antiguedad }}
+              {%- if debtor.open_services > 1 %} · {{ debtor.open_services }} trabajos{% endif %}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">Nadie te debe nada.</p>
+  {% endif %}
+</section>
+
+{% if overview.uncollected_cents %}
+  {# §9.1: el dinero perdido se muestra por separado y nunca mezclado con el
+     ingreso. Por eso está aquí abajo, en su propia tarjeta y apagado. #}
+  <section class="card">
+    <h2>Dinero no cobrado</h2>
+    <p class="figure__amount figure__amount--quiet">{{ overview.uncollected_cents | pesos }}</p>
+    <p class="muted">
+      Trabajos que cerraste dando el saldo por perdido. No cuenta como ingreso
+      ni como dinero por cobrar.
+      <a href="/trabajos?estado=closed_uncollected">Ver cuáles</a>
+    </p>
+  </section>
+{% endif %}
 {% endblock %}

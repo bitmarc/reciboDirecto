@@ -119,4 +119,44 @@
     <p class="empty">Todavía no hay pagos registrados.</p>
   {% endif %}
 </section>
+
+{% if service.status.value == 'closed_uncollected' %}
+  <section class="card">
+    <h2>Cerrado como no cobrado</h2>
+    <dl class="facts">
+      <dt>Dado por perdido</dt>
+      <dd><strong>{{ service.uncollected_cents | pesos }}</strong></dd>
+      <dt>Motivo</dt>
+      <dd>{{ service.closed_reason }}</dd>
+      <dt>Fecha</dt>
+      <dd>{{ service.closed_at | fecha_larga }}</dd>
+    </dl>
+    <p class="muted">
+      Este monto salió de «por cobrar» y aparece aparte en el panel. Los recibos
+      que ya emitiste no cambian: lo cobrado se cobró.
+    </p>
+  </section>
+{% elif totals.balance_cents is not none and totals.balance_cents > 0 %}
+  {# RN-17: el cierre por incobrable es una decisión explícita del emisor, no un
+     estado que el sistema calcule, y no se revierte. Por eso está al final de
+     la ficha y no entre las acciones de arriba. #}
+  <section class="card">
+    <h2>Dar por perdido</h2>
+    <p class="muted">
+      Si ya no vas a cobrar los {{ totals.balance_cents | pesos }} que faltan,
+      ciérralo aquí. El saldo deja de contar como dinero por cobrar y queda
+      registrado aparte. No se puede deshacer.
+    </p>
+    <form method="post" action="/trabajos/{{ service.id }}/cerrar">
+      <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+      <label for="close_reason">Motivo</label>
+      <input id="close_reason" name="reason" type="text" required
+             placeholder="El cliente se mudó y ya no contesta"
+             value="{{ values.close_reason if values and values.close_reason else '' }}">
+      <button type="submit" class="button button--secondary">
+        Cerrar como no cobrado
+      </button>
+    </form>
+  </section>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ report.label | capitalize }} — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{{ report.label | capitalize }}</h1>
+  <a class="button button--secondary button--inline"
+     href="/reportes/mensual.csv?periodo={{ report.period }}">Descargar CSV</a>
+</div>
+
+<section class="card">
+  <nav class="filters">
+    <a class="tag" href="/reportes?periodo={{ report.previous_period }}">
+      ← {{ report.previous_period | mes }}
+    </a>
+    {% if report.next_period %}
+      <a class="tag" href="/reportes?periodo={{ report.next_period }}">
+        {{ report.next_period | mes }} →
+      </a>
+    {% endif %}
+  </nav>
+</section>
+
+<section class="card figure">
+  <p class="figure__label">Ingreso del mes</p>
+  <p class="figure__amount">{{ report.income_cents | pesos }}</p>
+  <p class="muted">
+    {{ report.rows | length }} pago{{ '' if report.rows | length == 1 else 's' }} registrado{{ '' if report.rows | length == 1 else 's' }}
+    {%- if report.material_cents %} · {{ report.material_cents | pesos }} de material descontado{% endif %}
+  </p>
+</section>
+
+<section class="card">
+  <h2>Pagos</h2>
+  {% if report.rows %}
+    {# Es la misma tabla que baja en el CSV, columna por columna: quien la mira
+       aquí ya sabe qué va a abrir en su hoja de cálculo. Cabe scroll lateral;
+       §7.1 permite que esta pantalla sea fea mientras sea funcional. #}
+    <div class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Folio</th>
+            <th>Cliente</th>
+            <th>Trabajo</th>
+            <th>Concepto</th>
+            <th class="table__number">Monto</th>
+            <th class="table__number">Material</th>
+            <th class="table__number">Ingreso neto</th>
+            <th>Método</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.rows %}
+            <tr {% if not row.counted %}class="table__row--muted"{% endif %}>
+              <td>{{ row.paid_at | fecha_corta }}</td>
+              <td>{{ row.folio or '—' }}</td>
+              <td>{{ row.client_name }}</td>
+              <td>{{ row.service_code }}</td>
+              <td>{{ row.concept }}</td>
+              <td class="table__number">{{ row.amount_cents | pesos }}</td>
+              <td class="table__number">{{ row.material_cents | pesos }}</td>
+              <td class="table__number">{{ row.income_cents | pesos }}</td>
+              <td>{{ metodo_pago_enum[row.method] }}</td>
+              {# La misma función que escribe la columna «Estado» del CSV. #}
+              <td>{{ estado_contable(row.payment_status, row.receipt_status) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">
+      Los pagos cancelados siguen apareciendo, con su ingreso neto en cero: el
+      registro se conserva, pero no cuenta.
+    </p>
+  {% else %}
+    <p class="empty">No hubo pagos en este mes.</p>
+  {% endif %}
+</section>
+
+{% if report.uncollected_services %}
+  <section class="card">
+    <h2>Dado por perdido este mes</h2>
+    <p class="figure__amount figure__amount--quiet">{{ report.uncollected_cents | pesos }}</p>
+    <ul class="list">
+      {% for service in report.uncollected_services %}
+        <li class="list__item">
+          <a href="/trabajos/{{ service.id }}">
+            <span class="list__title">{{ service.uncollected_cents | pesos }}</span>
+            <span class="list__meta">{{ service.code }} · {{ service.concept }}</span>
+            <span class="list__meta">{{ service.closed_reason }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+{% endblock %}

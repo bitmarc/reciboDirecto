@@ -229,6 +229,82 @@ button:focus-visible, a:focus-visible {
 .filters a { text-decoration: none; min-height: var(--tap); display: inline-flex; align-items: center; }
 
 /* --------------------------------------------------------------------------
+   Panel y reporte (§7.4, §9)
+   --------------------------------------------------------------------------
+   Las dos cifras del panel se leen de un vistazo desde la mesa; el resto de la
+   pantalla es consulta y puede pedir atención. De ahí la diferencia de tamaño,
+   que no es decorativa: §7.4 fija ese orden y ese peso visual.
+   -------------------------------------------------------------------------- */
+
+h2 { font-size: 1.125rem; margin: 0 0 0.75rem; }
+
+.figure__label {
+  margin: 0;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+}
+
+.figure__amount {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* El dinero perdido nunca se mezcla con el ingreso (§9.1). Se muestra más
+   chico y apagado para que no se lea como un tercer ingreso. */
+.figure__amount--quiet { font-size: 1.5rem; color: var(--ink-soft); }
+
+/* Gráfica de seis meses, sin JS: barras de ancho porcentual. */
+.chart { list-style: none; margin: 0; padding: 0; }
+
+.chart__row { margin-bottom: 0.75rem; }
+.chart__row:last-child { margin-bottom: 0; }
+
+.chart__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+}
+
+.chart__row--current .chart__head { color: var(--ink); font-weight: 600; }
+
+.chart__track {
+  display: block;
+  height: 10px;
+  margin-top: 0.25rem;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.chart__bar {
+  display: block;
+  height: 100%;
+  min-width: 2px; /* un mes con ingreso mínimo se sigue viendo */
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+/* Tabla del reporte. Diez columnas no caben en un teléfono y no tienen por qué:
+   se desplaza en su propio contenedor, sin arrastrar la página con ella. */
+.table-scroll { overflow-x: auto; margin: 0 -1.25rem; padding: 0 1.25rem; }
+
+.table { border-collapse: collapse; width: 100%; font-size: 0.9375rem; }
+.table th, .table td { padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
+.table th { font-size: 0.8125rem; color: var(--ink-soft); font-weight: 600; }
+.table tbody tr { border-top: 1px solid var(--line); }
+.table__number { text-align: right; font-variant-numeric: tabular-nums; }
+/* El renglón cancelado se apaga y sus cifras van tachadas; el concepto no, que
+   es lo que el emisor lee para reconocer de qué pago se trataba. */
+.table__row--muted { color: var(--ink-soft); }
+.table__row--muted .table__number { text-decoration: line-through; }
+
+/* --------------------------------------------------------------------------
    Pantalla de cobro (§7.1, §7.2)
    --------------------------------------------------------------------------
    La única pantalla que importa. El emisor está de pie, con el celular en una

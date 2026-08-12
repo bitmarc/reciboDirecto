@@ -43,6 +43,19 @@ PAYMENT_METHOD = {
 # recibo lo busca por su valor y no por el miembro del enum.
 PAYMENT_METHOD_BY_VALUE = {method.value: label for method, label in PAYMENT_METHOD.items()}
 
+
+def accounting_status(payment_status: PaymentStatus, receipt_status: ReceiptStatus | None) -> str:
+    """Por qué un renglón del reporte cuenta o no cuenta para el ingreso (§9.2).
+
+    Distingue el pago cancelado del recibo cancelado aunque hoy se cancelen
+    juntos: si el emisor abre el reporte para entender por qué le falta dinero,
+    la respuesta tiene que estar en la fila y no en su memoria.
+    """
+    if receipt_status is ReceiptStatus.CANCELLED:
+        return "Recibo cancelado"
+    return PAYMENT_STATUS[payment_status]
+
+
 # §14.1, resuelto: en qué calidad firma quien firma. Se imprime bajo su nombre,
 # porque sin ese dato se reproduce el "yo no fui" cuando firma un tercero.
 SIGNER_CAPACITY = {

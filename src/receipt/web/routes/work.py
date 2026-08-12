@@ -2,9 +2,10 @@
 
 Pantalla de consulta, no de captura. Un trabajo se crea **en el momento del
 primer pago** (RN-15), así que aquí no hay formulario de alta: eso es la pantalla
-de cobro del hito 4. Lo que sí se puede hacer desde aquí es registrar un monto
-extra sobre un trabajo en curso (RN-12), porque el emisor no siempre lo recuerda
-en el momento de cobrar.
+de cobro del hito 4. Lo que sí se hace desde aquí son las dos cosas que le pasan
+a un trabajo fuera del momento de cobro: registrar un monto extra (RN-12),
+porque el emisor no siempre lo recuerda mientras cobra, y darlo por perdido
+(RN-17), que nunca ocurre en la puerta de una casa sino semanas después.
 """
 
 from fastapi import APIRouter, Depends, Form, status
@@ -18,6 +19,7 @@ from receipt.services.errors import DomainError
 from receipt.services.receipts import by_payment
 from receipt.services.work import (
     add_adjustment,
+    close_uncollected,
     history_statement,
     load_adjustments,
     load_totals,
@@ -122,5 +124,38 @@ async def create_adjustment(
 
     # Un extra sobre un trabajo ya liquidado lo devuelve a `open` (RN-13).
     await refresh_status(scope, service)
+    await db.commit()
+    return RedirectResponse(f"/trabajos/{service.id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/trabajos/{service_id}/cerrar")
+async def close(
+    request: Request,
+    scope: Scope,
+    db: DbSession,
+    service_id: int,
+    reason: str = Form(""),
+) -> Response:
+    """Cierra el trabajo como no cobrado (RN-17).
+
+    El saldo sale de "por cobrar" y pasa al reporte de dinero perdido, que §9.1
+    muestra por separado y nunca mezclado con el ingreso. Los recibos ya
+    emitidos no se tocan: lo cobrado se cobró.
+    """
+    service = await _load(scope, service_id)
+    try:
+        await close_uncollected(scope, service, reason=reason)
+    except DomainError as exc:
+        # Sin rollback, igual que el alta de un monto extra: `close_uncollected`
+        # valida **antes** de tocar el objeto, así que no hay nada escrito que
+        # deshacer y la ficha se puede renderizar sobre el estado real. La
+        # prueba `test_rn17_a_closure_without_a_reason_is_refused` sostiene esa
+        # invariante contra la base de datos; el día que se rompa, falla ahí y
+        # no en producción.
+        context = await _detail_context(scope, service)
+        context["error"] = exc.message
+        context["values"] = {"close_reason": reason}
+        return render(request, "work/detail.html", context, status_code=status.HTTP_400_BAD_REQUEST)
+
     await db.commit()
     return RedirectResponse(f"/trabajos/{service.id}", status_code=status.HTTP_303_SEE_OTHER)

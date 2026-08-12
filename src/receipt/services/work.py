@@ -5,12 +5,9 @@ El módulo se llama `work` y no `services` porque vive dentro del paquete
 nombre del glosario (`Service`) y la pantalla, el suyo en español (`/trabajos`).
 
 Aquí vive lo que RN-13 exige saber de un trabajo —total vigente, pagado y
-saldo— y las dos formas de hacerlo crecer: crear uno nuevo o agregarle un monto
-extra. RN-16 deja esa elección al emisor y el sistema no decide por él.
-
-Fuera de alcance a propósito: el cierre por incobrable (RN-17). El modelo ya lo
-soporta, pero §15 lo asigna al hito 5 junto con el reporte de dinero perdido,
-que es lo que le da sentido.
+saldo— y las tres formas de cerrar su ciclo: crear uno nuevo, agregarle un monto
+extra o darlo por perdido. RN-16 deja la primera elección al emisor y el sistema
+no decide por él.
 """
 
 from collections.abc import Sequence
@@ -23,10 +20,15 @@ from receipt.domain.calculations import (
     current_total_cents,
     resolve_service_status,
 )
+from receipt.domain.clock import now_utc
 from receipt.domain.enums import PaymentStatus, ServiceStatus
 from receipt.models import Client, Payment, Service, ServiceAdjustment
 from receipt.repositories import AccountScope
-from receipt.services.errors import BusinessRuleViolation, ValidationError
+from receipt.services.errors import (
+    BusinessRuleViolation,
+    ConflictError,
+    ValidationError,
+)
 
 
 @dataclass(frozen=True)
@@ -245,6 +247,53 @@ async def refresh_status(scope: AccountScope, service: Service) -> ServiceTotals
     )
     await scope.session.flush()
     return totals
+
+
+async def close_uncollected(scope: AccountScope, service: Service, *, reason: str) -> Service:
+    """Cierra un trabajo dando su saldo por perdido (RN-17).
+
+    El monto **no se captura**: es el saldo del trabajo en este instante. Dejar
+    que el emisor escribiera otro rompería §9.1, donde el dinero perdido y el
+    por cobrar son dos mitades de la misma cuenta; un `uncollected_cents`
+    distinto del saldo haría que la suma de ambos dejara de dar el total vigente
+    y nadie sabría en cuál de los dos está el error.
+
+    No es reversible, y `resolve_service_status` lo respeta: un trabajo cerrado
+    así no vuelve a abrirse solo aunque después entre un pago. Es una decisión
+    del emisor, no un estado calculado.
+    """
+    cleaned = " ".join(reason.split())
+    if not cleaned:
+        # RN-17 lo exige y un CHECK de la base lo vuelve a exigir, por si el
+        # cierre llegara alguna vez por otra vía.
+        raise ValidationError(
+            "Escribe por qué das este trabajo por perdido. Es lo que te va a "
+            "explicar el número dentro de seis meses."
+        )
+
+    if service.status is ServiceStatus.CLOSED_UNCOLLECTED:
+        raise ConflictError("Este trabajo ya estaba cerrado como no cobrado.")
+
+    totals = await load_totals(scope, service)
+    balance = totals.balance_cents
+
+    if balance is None:
+        raise BusinessRuleViolation(
+            "RN-17",
+            "Este trabajo se cobró como pago único, sin total acordado: "
+            "no hay saldo que dar por perdido.",
+        )
+    if balance <= 0:
+        raise BusinessRuleViolation(
+            "RN-17", "Este trabajo está liquidado: no queda saldo que dar por perdido."
+        )
+
+    service.status = ServiceStatus.CLOSED_UNCOLLECTED
+    service.closed_at = now_utc()
+    service.closed_reason = cleaned
+    service.uncollected_cents = balance
+    await scope.session.flush()
+    return service
 
 
 def history_statement(

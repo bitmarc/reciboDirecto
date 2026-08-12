@@ -16,6 +16,18 @@ def format_pesos(cents: int) -> str:
     return f"{sign}${whole:,}.{fraction:02d}"
 
 
+def format_plain(cents: int) -> str:
+    """`230000` → `"2300.00"`. El formato de dinero del CSV (§9.2).
+
+    Sin símbolo y sin separador de miles: `$2,300.00` entra a una hoja de
+    cálculo como texto y deja de poder sumarse, que es justo para lo que el
+    emisor abre el archivo.
+    """
+    sign = "-" if cents < 0 else ""
+    whole, fraction = divmod(abs(cents), 100)
+    return f"{sign}{whole}.{fraction:02d}"
+
+
 def amount_in_words(cents: int) -> str:
     """Monto en letra para la plantilla `single` (§8.2).
 

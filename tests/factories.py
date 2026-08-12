@@ -5,6 +5,7 @@ prueba solo tenga que declarar lo que de verdad le importa.
 """
 
 import secrets
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -90,7 +91,11 @@ async def make_service(
     code: str = "SRV-0001",
     concept: str = "Instalación de contactos",
     agreed_total_cents: int | None = 230000,
+    created_at: datetime | None = None,
 ) -> Service:
+    """`created_at` se puede fijar porque la antigüedad de un adeudo (§7.4) se
+    cuenta desde ahí, y una prueba de orden necesita trabajos de fechas
+    distintas sin esperar días."""
     service = Service(
         account_id=account.id,
         client_id=client.id,
@@ -99,6 +104,9 @@ async def make_service(
         agreed_total_cents=agreed_total_cents,
         status=ServiceStatus.OPEN,
     )
+    if created_at is not None:
+        service.created_at = created_at
+        service.updated_at = created_at
     db.add(service)
     await db.flush()
     return service
@@ -124,13 +132,16 @@ async def make_payment(
     amount_cents: int = 180000,
     material_cents: int = 0,
     method: PaymentMethod = PaymentMethod.CASH,
+    paid_at: datetime | None = None,
 ) -> Payment:
+    """`paid_at` es la fecha de corte contable (RN-13, §9.1), así que las
+    pruebas del mes —`AC-07` entre ellas— tienen que poder fijarla."""
     payment = Payment(
         service_id=service.id,
         amount_cents=amount_cents,
         material_cents=material_cents,
         method=method,
-        paid_at=now_utc(),
+        paid_at=paid_at or now_utc(),
     )
     db.add(payment)
     await db.flush()

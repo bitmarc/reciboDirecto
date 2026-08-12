@@ -12,6 +12,7 @@
     <a href="/trabajos" class="tag {% if not estado %}tag--ok{% endif %}">Todos</a>
     <a href="/trabajos?estado=open" class="tag {% if estado == 'open' %}tag--ok{% endif %}">Abiertos</a>
     <a href="/trabajos?estado=settled" class="tag {% if estado == 'settled' %}tag--ok{% endif %}">Liquidados</a>
+    <a href="/trabajos?estado=closed_uncollected" class="tag {% if estado == 'closed_uncollected' %}tag--ok{% endif %}">No cobrados</a>
   </nav>
 </section>
 
@@ -28,7 +29,11 @@
               {% if service.location_alias %} · {{ service.location_alias }}{% endif %}
             </span>
             <span class="list__meta">
-              {% if summary.current_total_cents is not none %}
+              {% if service.status.value == 'closed_uncollected' %}
+                {# Su saldo ya no es dinero por cobrar: es dinero perdido (RN-17). #}
+                Pagado {{ summary.paid_cents | pesos }} ·
+                <strong>Perdido {{ service.uncollected_cents | pesos }}</strong>
+              {% elif summary.current_total_cents is not none %}
                 Total {{ summary.current_total_cents | pesos }} ·
                 Pagado {{ summary.paid_cents | pesos }} ·
                 <strong>Saldo {{ summary.balance_cents | pesos }}</strong>
