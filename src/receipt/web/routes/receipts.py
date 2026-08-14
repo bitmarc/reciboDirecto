@@ -19,6 +19,7 @@ from fastapi.responses import RedirectResponse, Response
 from starlette.requests import Request
 
 from receipt.domain.enums import ReceiptStatus, ReceiptTemplate, SignerCapacity
+from receipt.infra.mail import MailDeliveryError
 from receipt.models import Receipt
 from receipt.security.csrf import verify_csrf
 from receipt.services.documents import (
@@ -157,6 +158,32 @@ async def send_by_email(
             "receipts/detail.html",
             detail_context,
             status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    except MailDeliveryError:
+        # 502, no 400: el 400 de arriba dice «corrige el dato» y aquí no hay
+        # dato que corregir. La avería es nuestra.
+        #
+        # El mensaje nombra la salida que sí funciona. WhatsApp y la liga no
+        # dependen del proveedor ni tienen cuota, y con el dominio gestionado
+        # —10 correos por hora en toda la suscripción— esta rama se va a
+        # recorrer de verdad, con el cliente delante del emisor.
+        #
+        # Sin `db.rollback()`: el commit solo ocurre tras el éxito y
+        # `get_db_session` deshace el resto. Un rollback explícito aquí es lo
+        # que rompió la ruta de cierre por incobrable en el hito 5, porque con
+        # `join_transaction_mode="create_savepoint"` tumba la transacción
+        # entera de la prueba. El PDF ya subido queda huérfano, que es
+        # correcto y esperado (ver `infra/blob.py`).
+        detail_context = await _detail_context(scope, blobs, account, receipt)
+        detail_context["error"] = (
+            "No pudimos enviar el correo en este momento. Comparte el recibo "
+            "por WhatsApp o copia la liga: el cliente recibe lo mismo."
+        )
+        return render(
+            request,
+            "receipts/detail.html",
+            detail_context,
+            status_code=status.HTTP_502_BAD_GATEWAY,
         )
 
     await db.commit()

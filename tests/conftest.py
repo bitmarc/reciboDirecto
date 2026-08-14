@@ -25,6 +25,7 @@ import re
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
@@ -62,7 +63,13 @@ os.environ["MAIL_BACKEND"] = "memory"
 
 from receipt.db import get_db_session  # noqa: E402
 from receipt.infra.blob import BlobStore, get_blob_store, reset_blob_store  # noqa: E402
-from receipt.infra.mail import RecordingMailer, get_mailer, set_mailer  # noqa: E402
+from receipt.infra.mail import (  # noqa: E402
+    MailDeliveryError,
+    Message,
+    RecordingMailer,
+    get_mailer,
+    set_mailer,
+)
 from receipt.main import create_app  # noqa: E402
 from receipt.security.rate_limit import clear_all  # noqa: E402
 
@@ -153,6 +160,36 @@ def mailer() -> Iterator[RecordingMailer]:
     set_mailer(None)
 
 
+class FailingMailer:
+    """Adaptador que siempre falla. Implementa el puerto `Mailer`.
+
+    Vive en la suite y no en `infra/mail.py` a propósito: un adaptador roto a
+    conciencia no tiene por qué poder construirse desde el código de
+    producción. Existe porque `ConsoleMailer` y `RecordingMailer` no lanzan
+    nunca, así que sin esto las cuatro rutas que mandan correo se probarían
+    solo por su camino feliz.
+    """
+
+    def __init__(self) -> None:
+        self.attempts: list[Message] = []
+
+    async def send(self, message: Message) -> None:
+        self.attempts.append(message)
+        raise MailDeliveryError("El proveedor no aceptó el mensaje.")
+
+
+@pytest.fixture
+def mailer_caido(app: FastAPI) -> FailingMailer:
+    """Sustituye el buzón por uno averiado.
+
+    Pide `app` y no `client` para poder pisar la dependencia sin hurgar en los
+    interiores del transporte de httpx.
+    """
+    broken = FailingMailer()
+    app.dependency_overrides[get_mailer] = lambda: broken
+    return broken
+
+
 @pytest.fixture(autouse=True)
 def reset_rate_limiter() -> Iterator[None]:
     """Los limitadores son estado global del proceso.
@@ -169,17 +206,25 @@ def reset_rate_limiter() -> Iterator[None]:
 
 
 @pytest.fixture
-async def client(
-    db: AsyncSession, blobs: BlobStore, mailer: RecordingMailer
-) -> AsyncIterator[AsyncClient]:
+def app(db: AsyncSession, blobs: BlobStore, mailer: RecordingMailer) -> Iterator[FastAPI]:
+    """La aplicación con la infraestructura de la prueba ya enchufada.
+
+    Separada de `client` para que un fixture pueda pisar una dependencia
+    —`mailer_caido`— sin tener que alcanzar la app a través del transporte.
+    """
+    application = create_app()
+    application.dependency_overrides[get_db_session] = lambda: db
+    application.dependency_overrides[get_blob_store] = lambda: blobs
+    application.dependency_overrides[get_mailer] = lambda: mailer
+    yield application
+    application.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     """Cliente HTTP sobre la app, compartiendo la transacción de la prueba."""
-    app = create_app()
-    app.dependency_overrides[get_db_session] = lambda: db
-    app.dependency_overrides[get_blob_store] = lambda: blobs
-    app.dependency_overrides[get_mailer] = lambda: mailer
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
         yield http
-    app.dependency_overrides.clear()
 
 
 REGISTRATION = {

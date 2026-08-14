@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse, Response
 from starlette.requests import Request
 
 from receipt.infra.blob import BlobNotFound
+from receipt.infra.mail import MailDeliveryError
 from receipt.security.csrf import verify_csrf
 from receipt.services.auth_tokens import send_email_verification
 from receipt.services.errors import DomainError
@@ -147,7 +148,14 @@ async def resend_verification(user: CurrentUser, db: DbSession, mailer: MailerDe
     if user.email_verified_at is not None:
         return _back("Tu correo ya está confirmado.")
 
-    await send_email_verification(db, mailer, user)
+    try:
+        await send_email_verification(db, mailer, user)
+    except MailDeliveryError:
+        # Aquí el error sí se dice. No hay nada que filtrar: el usuario está
+        # autenticado y es su propia dirección, así que callar solo lo dejaría
+        # esperando una liga que nunca pidió dos veces.
+        return _back(error="No pudimos enviar el correo. Inténtalo en unos minutos.")
+
     await db.commit()
     return _back("Te enviamos la liga de confirmación.")
 

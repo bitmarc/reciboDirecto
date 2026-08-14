@@ -170,9 +170,13 @@ cada `AC`.
 
 ### Correo en desarrollo
 
-`MAIL_BACKEND=console` escribe el correo al log en lugar de enviarlo. La liga de
-recuperación aparece en `docker compose logs -f app`. El proveedor real se
-enchufa al desplegar, que es cuando el hito 4 también necesitará enviar recibos.
+`MAIL_BACKEND=console` —el valor por omisión— escribe el correo al log en lugar
+de enviarlo. La liga de recuperación aparece en `docker compose logs -f app`.
+
+`MAIL_BACKEND=azure` envía de verdad, por Azure Communication Services. Necesita
+`ACS_CONNECTION_STRING` y `ACS_SENDER_ADDRESS`; sin ellas la aplicación no
+arranca, a propósito. El alta de los recursos está en
+[`docs/correo-azure-alta.md`](docs/correo-azure-alta.md).
 
 ---
 

@@ -17,8 +17,10 @@ dependencies = [
     "itsdangerous (>=2.2,<3.0)",
     "email-validator (>=2.2,<3.0)",
     "azure-storage-blob (>=12.24,<13.0)",
-    # Transporte asíncrono del SDK de Azure: `azure.storage.blob.aio` no arranca
-    # sin él y el fallo aparece hasta la primera subida.
+    "azure-communication-email (>=1.0,<2.0)",
+    # Transporte asíncrono del SDK de Azure: ni `azure.storage.blob.aio` ni
+    # `azure.communication.email.aio` arrancan sin él, y el fallo no aparece
+    # hasta la primera subida o el primer envío.
     "aiohttp (>=3.11,<4.0)",
     "weasyprint (>=63.0,<64.0)",
     "num2words (>=0.5.13,<0.6)",

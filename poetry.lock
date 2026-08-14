@@ -358,6 +358,23 @@ files = [
 ]
 
 [[package]]
+name = "azure-communication-email"
+version = "1.1.0"
+description = "Microsoft Azure MyService Management Client Library for Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "azure_communication_email-1.1.0-py3-none-any.whl", hash = "sha256:9212153f21cf7e68734c32ebfe8702b43398bd01df2dddb0ca52cd5a8bbd5024"},
+    {file = "azure_communication_email-1.1.0.tar.gz", hash = "sha256:6a4af8281024327c3ab18a4996919069a99a69aad3a19c40f7852a6682493327"},
+]
+
+[package.dependencies]
+azure-core = ">=1.30.0"
+isodate = ">=0.6.1"
+typing-extensions = ">=4.6.0"
+
+[[package]]
 name = "azure-core"
 version = "1.41.0"
 description = "Microsoft Azure Core Library for Python"
@@ -3563,4 +3580,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "6caed9c8fd6dc6a3735c880ded54742b63eca603e90f98be2e8c7a9e98bf01df"
+content-hash = "3d2fde9093809e740c8f8c7ba074cf88ea6c7f46c182885aab9bee1d307a0f6f"

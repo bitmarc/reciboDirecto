@@ -4,6 +4,8 @@ Las rutas visibles al usuario van en español (§7); las de §6 se conservan com
 alias para que la superficie de API del PRD resuelva.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, Form, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -11,6 +13,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from receipt.domain.enums import AuthTokenPurpose
+from receipt.infra.mail import MailDeliveryError
 from receipt.models import User
 from receipt.security.csrf import verify_csrf
 from receipt.security.rate_limit import client_key
@@ -28,6 +31,8 @@ from receipt.web.dependencies import DbSession, MailerDep, auth_limiter, client_
 from receipt.web.templating import render
 
 router = APIRouter(tags=["auth"])
+
+logger = logging.getLogger("receipt.auth")
 
 _THROTTLED = "Demasiados intentos. Espera unos minutos antes de volver a probar."
 
@@ -128,7 +133,16 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    await send_email_verification(db, mailer, user)
+    try:
+        await send_email_verification(db, mailer, user)
+    except MailDeliveryError:
+        # El alta se completa igual. La cuenta ya existe cuando se manda el
+        # correo, y `send_email_verification` documenta que la verificación no
+        # bloquea el uso: tumbar un registro por un proveedor caído sería un
+        # autogol. El token emitido se compromete sin problema — «Reenviar la
+        # liga de confirmación» en /ajustes lo invalida y emite otro.
+        logger.exception("No salió el correo de verificación de una cuenta recién creada")
+
     await db.commit()
 
     response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
@@ -176,8 +190,20 @@ async def forgot_password(
     if normalized:
         user = await db.scalar(select(User).where(User.email == normalized))
         if user is not None:
-            await send_password_reset(db, mailer, user)
-            await db.commit()
+            try:
+                await send_password_reset(db, mailer, user)
+                await db.commit()
+            except MailDeliveryError:
+                # Se calla **a propósito**, y cuesta. Un error de transporte
+                # solo puede aparecer cuando hubo intento de envío, o sea
+                # cuando la cuenta existe: mostrarlo convertiría el formulario
+                # en el detector de cuentas que `_RESET_SENT` evita.
+                #
+                # El precio es que el usuario espera una liga que no llega, sin
+                # ninguna señal. Con el dominio gestionado y sus 10 correos por
+                # hora esto no es hipotético, así que **este log es el único
+                # aviso que existe** y hay que mirarlo.
+                logger.exception("No salió una liga de recuperación de contraseña")
 
     return render(request, "auth/forgot.html", {"notice": _RESET_SENT})
 

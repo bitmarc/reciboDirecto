@@ -3,6 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,11 +27,19 @@ class Settings(BaseSettings):
     azure_storage_connection_string: str
     blob_container: str = "receipts"
 
-    # `console` escribe el correo al log en lugar de enviarlo. El proveedor real
-    # se enchufa al desplegar (§3.1 no lo decide y elegirlo obliga a verificar
-    # un dominio remitente antes de tener un usuario).
-    mail_backend: Literal["console", "memory"] = "console"
+    # `console` escribe el correo al log, `memory` lo guarda para las pruebas y
+    # `azure` lo manda de verdad por Communication Services.
+    mail_backend: Literal["console", "memory", "azure"] = "console"
+
+    # Solo lo usa `ConsoleMailer`, para que el volcado del log se lea bien. El
+    # remitente real de Azure va en `acs_sender_address`, que es una dirección
+    # pelada: el nombre visible se configura en el portal, en el dominio.
     mail_from: str = "Recibo <no-responder@recibo.mx>"
+
+    # Secretos de Communication Services. Vacíos salvo con `mail_backend=azure`,
+    # donde el validador de abajo los exige.
+    acs_connection_string: str = ""
+    acs_sender_address: str = ""
 
     public_base_url: str = "http://localhost:8000"
 
@@ -45,6 +54,29 @@ class Settings(BaseSettings):
     # el barrido hasta volverlo inútil.
     public_receipt_max_requests: int = 60
     public_receipt_window_seconds: int = 60
+
+    @model_validator(mode="after")
+    def _check_mail_backend(self) -> "Settings":
+        """Con `azure`, faltar un secreto impide arrancar.
+
+        Es a propósito más duro que dejarlo pasar. Una aplicación que arranca
+        creyendo que manda correo y no lo manda falla en silencio: el emisor ve
+        «te enviamos la liga», el usuario no recibe nada y nadie se entera hasta
+        que alguien se queja. Un contenedor que no levanta se nota en el
+        despliegue, que es cuando toca notarlo.
+        """
+        if self.mail_backend == "azure":
+            faltantes = [
+                nombre
+                for nombre, valor in (
+                    ("ACS_CONNECTION_STRING", self.acs_connection_string),
+                    ("ACS_SENDER_ADDRESS", self.acs_sender_address),
+                )
+                if not valor.strip()
+            ]
+            if faltantes:
+                raise ValueError(f"MAIL_BACKEND=azure exige {' y '.join(faltantes)}.")
+        return self
 
     @property
     def is_production(self) -> bool:

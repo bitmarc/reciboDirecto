@@ -1,10 +1,13 @@
 """Envío de correo.
 
-§3.1 sugiere Azure Communication Services o Resend/SendGrid, pero no decide, y
-elegir proveedor obliga a dar de alta un servicio y verificar un dominio antes
-de tener un solo usuario. Se define el puerto ahora y se enchufa el adaptador
-real al desplegar, que es también cuando el hito 4 necesitará enviar recibos por
-correo (§6, `POST /receipts/{id}/send-email`).
+§3.1 sugiere Azure Communication Services o Resend/SendGrid, pero no decide. Se
+eligió Azure Communication Services; el adaptador vive aparte, en `mail_azure`,
+para que este módulo siga siendo el puerto sin dependencias de proveedor.
+
+Este archivo define **el contrato**, y una parte del contrato es que `send()`
+puede fallar: ver `MailDeliveryError`. `ConsoleMailer` y `RecordingMailer` no
+fallan nunca, así que las pruebas que usan solo esos dos no ejercitan la mitad
+interesante de las rutas que mandan correo.
 """
 
 import logging
@@ -14,6 +17,23 @@ from typing import Protocol
 from receipt.config import get_settings
 
 logger = logging.getLogger("receipt.mail")
+
+
+class MailDeliveryError(RuntimeError):
+    """El proveedor no aceptó el mensaje.
+
+    **No hereda de `DomainError`, y es deliberado.** `DomainError` significa
+    «el usuario capturó algo mal» y las rutas lo traducen a un 400 con el
+    mensaje puesto junto al campo. Una cuota agotada o una credencial caducada
+    no son eso: no hay nada que el emisor pueda corregir en el formulario, y
+    contestarle 400 le echaría la culpa de una avería nuestra.
+
+    Que sea `RuntimeError` obliga además a atraparlo explícitamente en cada
+    punto de envío. Son cuatro y cada uno decide distinto: el alta de cuenta se
+    completa igual, la recuperación de contraseña calla por seguridad y el
+    envío del recibo lo grita. Un padre común con los errores de dominio
+    invitaría a tratarlos juntos, que es justo lo que no hay que hacer.
+    """
 
 
 @dataclass(frozen=True)
@@ -96,8 +116,17 @@ _mailer: Mailer | None = None
 def get_mailer() -> Mailer:
     global _mailer
     if _mailer is None:
-        backend = get_settings().mail_backend
-        _mailer = ConsoleMailer() if backend == "console" else RecordingMailer()
+        settings = get_settings()
+        if settings.mail_backend == "azure":
+            # Importación diferida: quien desarrolla en local con `console` no
+            # tiene por qué cargar el SDK de Azure para arrancar la aplicación.
+            from receipt.infra.mail_azure import AzureMailer
+
+            _mailer = AzureMailer(settings.acs_connection_string, settings.acs_sender_address)
+        elif settings.mail_backend == "console":
+            _mailer = ConsoleMailer()
+        else:
+            _mailer = RecordingMailer()
     return _mailer
 
 
