@@ -13,6 +13,10 @@ htmlcov/
 .env
 .env.local
 
+# Notas de despliegue con credenciales reales pegadas: cadena de conexión de
+# Storage, contraseña de la base y secreto de sesión. Nunca al repositorio.
+infra/envs.txt
+
 .idea/
 .vscode/
 *.swp
