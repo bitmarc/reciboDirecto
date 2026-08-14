@@ -34,6 +34,7 @@ from receipt.services.charging import ChargeRequest, charge
 from receipt.services.clients import search_statement
 from receipt.services.errors import DomainError
 from receipt.services.media import store_client_signature
+from receipt.services.plans import PlanLimitReached, allowance_of, record_block
 from receipt.services.work import load_totals, open_services_statement
 from receipt.web.dependencies import Blobs, CurrentAccount, DbSession, Scope
 from receipt.web.templating import render
@@ -67,7 +68,15 @@ def _cents(pesos: str) -> int | None:
 
 
 @router.get("/cobrar")
-async def form(request: Request, scope: Scope, account: CurrentAccount) -> Response:
+async def form(request: Request, scope: Scope, db: DbSession, account: CurrentAccount) -> Response:
+    allowance = await allowance_of(db, account)
+
+    # RN-33. El muro se enseña **antes** de que empiece a llenar el formulario:
+    # §1.4 lo pone de pie con el efectivo en la mano y §14.3 advierte que
+    # enterarse en ese momento no produce una conversión, produce un abandono.
+    if allowance.blocked:
+        return RedirectResponse("/planes?bloqueo=1", status_code=status.HTTP_303_SEE_OTHER)
+
     return render(
         request,
         "charge/form.html",
@@ -75,6 +84,8 @@ async def form(request: Request, scope: Scope, account: CurrentAccount) -> Respo
             "default_city": account.default_city,
             "idempotency_key": _new_idempotency_key(),
             "signer_capacities": list(SignerCapacity),
+            # Con el cupo cerca del final, el formulario avisa cuántos quedan.
+            "allowance": allowance,
             "values": {},
         },
     )
@@ -176,6 +187,19 @@ async def submit(
                 signer_name=signer_name,
                 capacity=_enum_or(SignerCapacity, signer_capacity, SignerCapacity.HOLDER),
             )
+    except PlanLimitReached as exc:
+        # §11.2 exige registrar cada bloqueo, y el registro **no puede vivir
+        # dentro de la transacción del cobro**: esa se descarta y el evento se
+        # iría con ella. Aquí no hay nada que descartar —`charge()` comprueba el
+        # límite antes de tocar cliente, trabajo o pago— así que el evento se
+        # anota sobre la sesión limpia y se commitea solo.
+        #
+        # Es el dato que permitirá distinguir "el producto no le gustó" de "topó
+        # el muro" cuando haya que revisar §14.3 (AC-15). Sin rollback a
+        # propósito: uno aquí no arreglaría nada y sí tiraría el evento.
+        await record_block(db, account, exc.allowance)
+        await db.commit()
+        return RedirectResponse("/planes?bloqueo=1", status_code=status.HTTP_303_SEE_OTHER)
     except DomainError as exc:
         # Deshacer explícitamente, no confiar en que cerrar la sesión lo haga.
         # `charge()` puede haber dado de alta al cliente antes de que fallara el

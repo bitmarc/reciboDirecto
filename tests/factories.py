@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from receipt.domain.clock import now_utc
 from receipt.domain.enums import (
     CounterKind,
+    DiscountType,
     PaymentMethod,
     ReceiptTemplate,
     ServiceStatus,
@@ -20,6 +21,7 @@ from receipt.models import (
     Account,
     AccountCounter,
     Client,
+    Coupon,
     Payment,
     Receipt,
     Service,
@@ -146,6 +148,35 @@ async def make_payment(
     db.add(payment)
     await db.flush()
     return payment
+
+
+async def make_coupon(
+    db: AsyncSession,
+    *,
+    code: str = "GRACIAS3",
+    discount_type: DiscountType = DiscountType.FREE_MONTHS,
+    discount_value: int = 3,
+    max_redemptions: int | None = None,
+    valid_until: datetime | None = None,
+    active: bool = True,
+) -> Coupon:
+    """Un cupón del catálogo global (§11.3).
+
+    No cuelga de ninguna cuenta: los cupones se dan de alta a mano en la base,
+    porque §2.2 no pide pantalla de administración y construirla sería alcance
+    que nadie pidió.
+    """
+    coupon = Coupon(
+        code=code,
+        discount_type=discount_type,
+        discount_value=discount_value,
+        max_redemptions=max_redemptions,
+        valid_until=valid_until,
+        active=active,
+    )
+    db.add(coupon)
+    await db.flush()
+    return coupon
 
 
 async def make_receipt(

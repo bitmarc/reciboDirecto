@@ -109,7 +109,12 @@
       {% endif %}
     </dd>
     <dt>Plan</dt>
-    <dd>{% if account.plan.value == 'paid' %}De pago{% else %}Gratuito{% endif %}</dd>
+    {# Lo decide la vigencia, no la columna: un plan de pago vencido ya no da
+       funciones de pago (RN-34). #}
+    <dd>
+      {{ "De pago" if rights.paid else "Gratuito" }}
+      <a href="/planes">Ver los planes</a>
+    </dd>
   </dl>
 
   {% if not user.email_verified_at %}

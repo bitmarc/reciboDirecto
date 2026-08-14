@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Función del plan de pago — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Esto es del plan de pago</h1>
+</div>
+
+<section class="card">
+  <p>{{ message }}</p>
+  {# RN-35 acota la analítica, nunca el historial: conviene decirlo aquí, que es
+     donde el emisor podría temer haber perdido algo. #}
+  <p class="muted">
+    Tus recibos, trabajos y clientes siguen completos, y las ligas que ya
+    entregaste funcionan igual. Lo que el plan gratuito acota son la gráfica de
+    meses pasados y la descarga del reporte.
+  </p>
+  <div class="button-row">
+    <a class="button button--primary" href="/planes">Ver los planes</a>
+    <a class="button button--secondary" href="/reportes">Ver el mes en curso</a>
+  </div>
+</section>
+{% endblock %}

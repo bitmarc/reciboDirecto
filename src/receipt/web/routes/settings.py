@@ -4,12 +4,12 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import RedirectResponse, Response
 from starlette.requests import Request
 
-from receipt.domain.enums import Plan
 from receipt.infra.blob import BlobNotFound
 from receipt.security.csrf import verify_csrf
 from receipt.services.auth_tokens import send_email_verification
 from receipt.services.errors import DomainError
 from receipt.services.media import remove_logo, store_logo, store_signature
+from receipt.services.plans import entitlements
 from receipt.web.dependencies import (
     Blobs,
     CurrentAccount,
@@ -46,13 +46,19 @@ async def settings_page(
     aviso: str = "",
     error: str = "",
 ) -> Response:
+    rights = entitlements(account)
     return render(
         request,
         "settings/index.html",
         {
             "account": account,
             "user": user,
-            "can_use_logo": account.plan is Plan.PAID,
+            # RN-34 se decide con la vigencia, no solo con la columna `plan`:
+            # una cuenta con `plan = paid` y fecha vencida ya no tiene funciones
+            # de pago, y ofrecerle subir un logo que no se estamparía sería
+            # mentirle. La misma función que usa el motor de cobro al emitir.
+            "can_use_logo": rights.can_use_logo,
+            "rights": rights,
             "notice": aviso or None,
             "error": error or None,
         },

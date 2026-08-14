@@ -5,6 +5,7 @@ es `America/Mexico_City`. Ningún cálculo de mes usa UTC: un pago del 31 a las
 23:30 hora de CDMX pertenece a ese mes y no al siguiente (AC-07).
 """
 
+from calendar import monthrange
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
@@ -69,6 +70,20 @@ def month_bounds_utc(period: str) -> tuple[datetime, datetime]:
     next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
     end_local = datetime(next_year, next_month, 1, tzinfo=LOCAL_TZ)
     return start_local.astimezone(UTC), end_local.astimezone(UTC)
+
+
+def add_months(moment: datetime, months: int) -> datetime:
+    """Suma meses de calendario, contados sobre el calendario local.
+
+    Un cupón de "3 meses gratis" concede tres meses de calendario, no noventa
+    días. Cuando el día no existe en el mes destino se recorta al último: el 31
+    de enero más un mes es el 28 de febrero, porque el 31 de febrero no existe.
+    """
+    local = to_local(moment)
+    total = local.year * 12 + (local.month - 1) + months
+    year, month = total // 12, total % 12 + 1
+    day = min(local.day, monthrange(year, month)[1])
+    return local.replace(year=year, month=month, day=day).astimezone(UTC)
 
 
 def shift_period(period: str, months: int) -> str:

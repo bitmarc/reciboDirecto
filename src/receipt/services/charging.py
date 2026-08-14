@@ -10,6 +10,8 @@ una vez lo que §6 describe para `POST /payments`:
 - emite el recibo con su snapshot y su folio (RN-10, RN-25),
 - suma el consumo del mes (RN-33).
 
+Antes de todo eso comprueba el límite del plan y, si topó, no escribe nada.
+
 Nada de esto se commitea aquí: la transacción es del llamador, igual que en el
 resto de la capa de servicios. O sale todo, o no sale nada — un pago sin recibo,
 o un recibo sin pago, son estados que el producto no sabe explicar.
@@ -34,6 +36,7 @@ from receipt.repositories import AccountScope
 from receipt.services.clients import create_client
 from receipt.services.counters import allocate_folio
 from receipt.services.errors import BusinessRuleViolation, ConflictError, ValidationError
+from receipt.services.plans import assert_can_issue
 from receipt.services.receipts import issue_receipt
 from receipt.services.work import (
     add_adjustment,
@@ -130,6 +133,20 @@ async def charge(scope: AccountScope, account: Account, request: ChargeRequest) 
         if existing is not None:
             return await _replay(scope, existing, fingerprint)
 
+    # RN-33, y el orden importa dos veces. Después del reenvío, porque repetir
+    # un cobro ya emitido no consume cupo nuevo y bloquearlo dejaría al emisor
+    # sin poder recuperar su propio recibo. Antes de reservar la clave y de
+    # tocar cliente, trabajo o pago, porque un cobro rechazado no puede dejar
+    # nada a medias: ni un cliente huérfano en el directorio ni una clave de
+    # idempotencia quemada que impida reintentar tras suscribirse.
+    #
+    # Se mide contra el periodo de **hoy** y no contra `paid_at`: el cupo cuenta
+    # recibos emitidos, no pagos recibidos, igual que `record_issuance`. Un pago
+    # capturado en diferido consume el cupo del mes en que se emite el
+    # comprobante, que es el mismo mes contra el que se comprobó aquí.
+    await assert_can_issue(scope.session, account)
+
+    if request.idempotency_key:
         try:
             # Se reserva la clave **antes** de trabajar. Si dos peticiones
             # gemelas llegan a la vez, la segunda choca contra el índice único

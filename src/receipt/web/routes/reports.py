@@ -10,7 +10,7 @@ web decide cómo se leen.
 import csv
 import io
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import Response
 from starlette.requests import Request
 
@@ -18,8 +18,10 @@ from receipt.domain.clock import current_period, format_local_date, parse_period
 from receipt.domain.money import format_plain
 from receipt.security.csrf import verify_csrf
 from receipt.services.accounting import MonthlyReport, monthly_report
+from receipt.services.errors import DomainError
+from receipt.services.plans import assert_period_visible, earliest_period, entitlements
 from receipt.web import labels
-from receipt.web.dependencies import Scope
+from receipt.web.dependencies import CurrentAccount, Scope
 from receipt.web.templating import render
 
 router = APIRouter(tags=["reports"], dependencies=[Depends(verify_csrf)])
@@ -97,22 +99,77 @@ def render_monthly_csv(report: MonthlyReport) -> bytes:
 
 
 @router.get("/reportes")
-async def monthly(request: Request, scope: Scope, periodo: str = "", period: str = "") -> Response:
+async def monthly(
+    request: Request,
+    scope: Scope,
+    account: CurrentAccount,
+    periodo: str = "",
+    period: str = "",
+) -> Response:
     """§6 documenta `?period=YYYY-MM`; la pantalla en español usa `?periodo=`.
 
     Se aceptan los dos porque el alias de §6 redirige aquí conservando la
     consulta original, y ninguna de las dos superficies debería quedar rota.
     """
     chosen = _period(periodo, period)
+    rights = entitlements(account)
+
+    try:
+        assert_period_visible(rights, chosen)
+    except DomainError as exc:
+        # RN-35. No es un 404 ni un 403 seco: §11.2 pide una pantalla clara que
+        # ofrezca la suscripción, y el mes que quiso ver es justamente el mejor
+        # argumento para enseñársela.
+        return render(
+            request,
+            "plans/locked.html",
+            {"account": account, "rights": rights, "message": exc.message, "period": chosen},
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        )
+
     report = await monthly_report(scope, chosen)
-    return render(request, "reports/monthly.html", {"report": report})
+    return render(
+        request,
+        "reports/monthly.html",
+        {
+            "report": report,
+            "rights": rights,
+            "earliest_period": earliest_period(rights),
+        },
+    )
 
 
 @router.get("/reportes/mensual.csv")
-async def monthly_csv(scope: Scope, periodo: str = "", period: str = "") -> Response:
+async def monthly_csv(
+    request: Request,
+    scope: Scope,
+    account: CurrentAccount,
+    periodo: str = "",
+    period: str = "",
+) -> Response:
     chosen = _period(periodo, period)
-    report = await monthly_report(scope, chosen)
+    rights = entitlements(account)
 
+    if not rights.can_download_report:
+        # Decisión del responsable del producto: la descarga es función de pago.
+        # §9.2 solo dice que en gratuito "la consulta se limita", así que esto va
+        # un paso más allá del PRD y queda anotado para revisarse con datos.
+        return render(
+            request,
+            "plans/locked.html",
+            {
+                "account": account,
+                "rights": rights,
+                "message": (
+                    "La descarga del reporte es del plan de pago. En pantalla "
+                    "puedes ver el mes en curso completo."
+                ),
+                "period": chosen,
+            },
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        )
+
+    report = await monthly_report(scope, chosen)
     return Response(
         content=render_monthly_csv(report),
         media_type=CSV_CONTENT_TYPE,

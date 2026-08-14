@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Tu plan — Recibo{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Tu plan</h1>
+  <span class="tag {% if rights.paid %}tag--ok{% endif %}">
+    {{ "De pago" if rights.paid else "Gratuito" }}
+  </span>
+</div>
+
+{% if blocked_now %}
+  {# §11.2: al topar el muro, una pantalla clara que ofrezca la suscripción. #}
+  <section class="card card--alert">
+    <h2>Llegaste a los {{ free_monthly_receipts }} recibos de este mes</h2>
+    <p>
+      El plan gratuito emite hasta {{ free_monthly_receipts }} recibos al mes.
+      Para seguir cobrando hoy necesitas el plan de pago; si prefieres esperar,
+      el contador se reinicia el mes que entra.
+    </p>
+    <p class="muted">
+      Lo que ya emitiste no se toca: tus recibos, sus ligas y sus PDF siguen
+      funcionando igual.
+    </p>
+  </section>
+{% endif %}
+
+{% if not rights.paid %}
+  <section class="card figure">
+    <p class="figure__label">Recibos de {{ allowance.period | mes }}</p>
+    <p class="figure__amount">{{ allowance.issued }} <span class="figure__of">de {{ allowance.limit }}</span></p>
+    {% if allowance.remaining %}
+      <p class="muted">Te quedan {{ allowance.remaining }} este mes.</p>
+    {% else %}
+      <p class="muted">Ya no te quedan recibos este mes.</p>
+    {% endif %}
+  </section>
+{% else %}
+  <section class="card">
+    <dl class="facts">
+      <dt>Emisión de recibos</dt>
+      <dd>Sin límite</dd>
+      {% if account.plan_valid_until %}
+        <dt>Vigente hasta</dt>
+        <dd>{{ account.plan_valid_until | fecha_larga }}</dd>
+      {% endif %}
+    </dl>
+  </section>
+{% endif %}
+
+<section class="card">
+  <h2>Qué incluye cada plan</h2>
+  {# §11.1, tal cual. #}
+  <div class="table-scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Gratuito</th>
+          <th>De pago</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Emisión de recibos</td>
+          <td>{{ free_monthly_receipts }} al mes</td>
+          <td>Sin límite</td>
+        </tr>
+        <tr>
+          <td>Historial de recibos y trabajos</td>
+          <td>Completo</td>
+          <td>Completo</td>
+        </tr>
+        <tr>
+          <td>Ligas públicas y PDF</td>
+          <td>Para siempre</td>
+          <td>Para siempre</td>
+        </tr>
+        <tr>
+          <td>Panel y quién me debe</td>
+          <td>Sí</td>
+          <td>Sí</td>
+        </tr>
+        <tr>
+          <td>Gráfica y reporte de meses pasados</td>
+          <td>{{ free_analytics_months }} mes</td>
+          <td>Todo</td>
+        </tr>
+        <tr>
+          <td>Descarga del reporte en CSV</td>
+          <td>No</td>
+          <td>Sí</td>
+        </tr>
+        <tr>
+          <td>Logo en el recibo</td>
+          <td>No</td>
+          <td>Sí</td>
+        </tr>
+        <tr>
+          <td>Envío por correo</td>
+          <td>Sí</td>
+          <td>Sí</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {# RN-31: un comprobante nunca deja de existir porque el emisor dejó de pagar. #}
+  <p class="muted">
+    Si algún día dejas el plan de pago, conservas todo tu historial y las ligas
+    que ya entregaste siguen funcionando.
+  </p>
+</section>
+
+<section class="card">
+  <h2>¿Tienes un código?</h2>
+  <p class="muted">
+    Los códigos de meses gratis se activan aquí mismo. Los meses se suman a lo
+    que ya tengas.
+  </p>
+  <form method="post" action="/planes/cupon">
+    <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
+    <label for="code">Código</label>
+    <input id="code" name="code" type="text" autocapitalize="characters"
+           autocomplete="off" placeholder="GRACIAS3" required>
+    <button type="submit" class="button button--secondary">Canjear</button>
+  </form>
+</section>
+
+{# §14.5 sigue abierta y §11.4 recomienda no construir la pasarela hasta saber
+   si alguien quiere pagar. Mientras tanto no hay botón de suscripción: la
+   activación es por cupón o manual. #}
+<p class="muted">
+  ¿Quieres el plan de pago? Escríbenos y lo activamos. Todavía no tenemos
+  pantalla de cobro en línea.
+</p>
+{% endblock %}

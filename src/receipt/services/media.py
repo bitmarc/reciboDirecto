@@ -9,8 +9,9 @@ RN-34: el logo solo se aplica en plan de pago.
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from receipt.domain.clock import now_utc
-from receipt.domain.enums import Plan, ReceiptStatus, SignerCapacity
+from receipt.domain.enums import ReceiptStatus, SignerCapacity
 from receipt.domain.images import ImageRejected, logo_png, signature_png_from_data_uri
+from receipt.domain.plans import has_paid_features
 from receipt.infra.blob import BlobStore, new_path
 from receipt.models import Account, Receipt
 from receipt.services.errors import BusinessRuleViolation, ConflictError, ValidationError
@@ -51,8 +52,13 @@ async def store_logo(
 
     La comprobación de plan va antes de tocar el blob: no tiene sentido gastar
     almacenamiento en una imagen que la cuenta no puede usar.
+
+    Se mira la **vigencia**, no solo la columna `plan`: una cuenta con
+    `plan = paid` y fecha vencida ya no estampa logo al emitir, y aceptarle uno
+    nuevo aquí le prometería algo que el recibo no cumpliría. Es la misma
+    función que decide RN-34 en el snapshot.
     """
-    if account.plan is not Plan.PAID:
+    if not has_paid_features(account.plan, account.plan_valid_until, now_utc()):
         raise BusinessRuleViolation("RN-34", "el logo solo está disponible en el plan de pago")
 
     try:

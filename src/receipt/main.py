@@ -19,6 +19,7 @@ from receipt.web.routes import (
     charge,
     clients,
     pages,
+    plans,
     public,
     receipts,
     reports,
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(work.router)
     app.include_router(receipts.router)
     app.include_router(reports.router)
+    app.include_router(plans.router)
     # La liga pública no lleva sesión ni CSRF: el token es la credencial (§3.3).
     app.include_router(public.router)
     # Las páginas van al final: registran los alias de §6, que son comodines

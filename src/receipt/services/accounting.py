@@ -176,16 +176,19 @@ def _income_of(payment: Payment, receipt: Receipt | None) -> int:
 
 
 async def income_series(
-    scope: AccountScope, *, period: str, months: int = SERIES_MONTHS
+    scope: AccountScope, *, period: str, periods: Sequence[str] | None = None
 ) -> list[MonthBar]:
-    """Ingreso de los `months` periodos que terminan en `period` (§7.4).
+    """Ingreso de una ventana de periodos que termina en `period` (§7.4).
 
     Una sola consulta cubre toda la ventana y el reparto por mes lo hace
     `period_of()` en hora de CDMX. El mes en curso es el último de la lista, así
     que el panel obtiene de aquí sus dos datos: la barra más reciente y la cifra
     grande de "ganado este mes".
+
+    `periods` llega calculado desde `services.plans` cuando el plan acota la
+    ventana (RN-35). Por omisión son los seis meses de §7.4.
     """
-    periods = recent_periods(period, months)
+    periods = list(periods) if periods else recent_periods(period, SERIES_MONTHS)
     start, _ = month_bounds_utc(periods[0])
     _, end = month_bounds_utc(periods[-1])
 
@@ -303,10 +306,21 @@ def _frozen_client_name(receipt: Receipt | None) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-async def overview(scope: AccountScope, *, period: str | None = None) -> Overview:
-    """El panel completo. `period` solo se pasa desde las pruebas."""
+async def overview(
+    scope: AccountScope,
+    *,
+    period: str | None = None,
+    periods: Sequence[str] | None = None,
+) -> Overview:
+    """El panel completo.
+
+    `periods` acota la gráfica cuando el plan lo exige (RN-35). Las dos cifras
+    grandes de §7.4 y la lista de "quién me debe" no se acotan nunca: RN-35
+    limita la analítica, y §17 mide el uso de "quién me debe" como señal de que
+    el producto funcionó. Cobrar por esa vista apagaría la medición.
+    """
     current = period or current_period()
-    months = await income_series(scope, period=current)
+    months = await income_series(scope, period=current, periods=periods)
     debtors, receivable_cents = await receivables(scope)
 
     return Overview(

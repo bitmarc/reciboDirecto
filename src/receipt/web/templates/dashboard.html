@@ -21,8 +21,22 @@
   <p class="muted">La suma de los saldos de tus trabajos abiertos.</p>
 </section>
 
+{% if allowance.warning %}
+  {# §14.3: el muro no puede sorprenderlo con el efectivo en la mano. #}
+  <p class="alert alert--notice">
+    Te quedan {{ allowance.remaining }} recibo{{ '' if allowance.remaining == 1 else 's' }}
+    este mes en el plan gratuito. <a href="/planes">Ver los planes</a>
+  </p>
+{% endif %}
+
 <section class="card">
-  <h2>Los últimos seis meses</h2>
+  <h2>
+    {% if overview.months | length > 1 %}
+      Los últimos {{ overview.months | length }} meses
+    {% else %}
+      {{ overview.label | capitalize }}
+    {% endif %}
+  </h2>
   {# Gráfica sin JS: barras de ancho porcentual. La CSP no admite scripts de
      terceros (§10) y seis barras no justifican una librería. #}
   <ul class="chart">
@@ -41,6 +55,15 @@
       </li>
     {% endfor %}
   </ul>
+  {% if not rights.paid %}
+    {# RN-35: la ventana acota la gráfica, no el historial. Se dice aquí para
+       que el hueco no se lea como datos perdidos. #}
+    <p class="muted">
+      El plan gratuito muestra el mes en curso. Con el plan de pago verías
+      {{ full_series_months }} meses de comparación.
+      <a href="/planes">Ver los planes</a>
+    </p>
+  {% endif %}
   <p class="muted">
     <a href="/reportes?periodo={{ overview.period }}">Ver el detalle de {{ overview.label }}</a>
   </p>

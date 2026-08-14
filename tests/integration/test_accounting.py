@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from receipt.domain.clock import LOCAL_TZ, now_utc
-from receipt.domain.enums import ServiceStatus
+from receipt.domain.enums import Plan, ServiceStatus
 from receipt.models import Account, Client, Service
 from receipt.repositories import AccountScope
 from receipt.services.accounting import monthly_report, overview
@@ -46,6 +46,22 @@ async def scope(db: AsyncSession, account: Account) -> AccountScope:
 @pytest.fixture
 async def customer(db: AsyncSession, account: Account) -> Client:
     return await make_client(db, account, full_name="Ana Ramírez", phone="5598765432")
+
+
+@pytest.fixture
+async def paid(db: AsyncSession, account: Account) -> Account:
+    """Cuenta en plan de pago, sin vencimiento.
+
+    Desde el hito 6, la gráfica de seis meses, el reporte de meses pasados y la
+    descarga del CSV son funciones de pago (RN-35, §11.1). Estas pruebas miran
+    la **contabilidad** y no el plan, así que corren sobre la cuenta que sí
+    tiene esas funciones; que el plan gratuito las recorte se prueba aparte, en
+    `test_plans.py`.
+    """
+    account.plan = Plan.PAID
+    account.plan_valid_until = None
+    await db.flush()
+    return account
 
 
 def read_csv(payload: bytes) -> list[list[str]]:
@@ -185,7 +201,12 @@ class TestAc07TheMonthEndsAtMidnightInMexicoCity:
         assert february.rows == ()
 
     async def test_the_csv_prints_the_local_date_and_not_the_utc_one(
-        self, signed_in: AsyncClient, scope: AccountScope, account: Account, customer: Client
+        self,
+        signed_in: AsyncClient,
+        scope: AccountScope,
+        account: Account,
+        customer: Client,
+        paid: Account,
     ) -> None:
         await charge(
             scope,
@@ -258,7 +279,12 @@ class TestCancelledMoneyLeavesTheAccounting:
         assert report.income_cents == 0
 
     async def test_the_csv_income_column_adds_up_to_the_dashboard_figure(
-        self, signed_in: AsyncClient, scope: AccountScope, account: Account, customer: Client
+        self,
+        signed_in: AsyncClient,
+        scope: AccountScope,
+        account: Account,
+        customer: Client,
+        paid: Account,
     ) -> None:
         """La prueba que justifica la decisión de escribir 0 y no el monto.
 
@@ -622,7 +648,12 @@ class TestTheDashboardScreen:
         assert "Ana Ramírez" in text, "quién me debe"
 
     async def test_the_six_month_chart_is_drawn_without_javascript(
-        self, signed_in: AsyncClient, scope: AccountScope, account: Account, customer: Client
+        self,
+        signed_in: AsyncClient,
+        scope: AccountScope,
+        account: Account,
+        customer: Client,
+        paid: Account,
     ) -> None:
         """§10 y §3.2: la CSP no admite scripts de terceros, y no hacen falta."""
         await charge(
@@ -698,13 +729,18 @@ class TestTheMonthlyReportScreen:
         assert response.status_code == 200
 
     async def test_an_empty_month_says_so(self, signed_in: AsyncClient) -> None:
-        response = await signed_in.get("/reportes?periodo=2020-01")
+        """El mes en curso de una cuenta recién registrada: vacío y consultable
+        en cualquier plan, que es lo que hace a este el caso útil."""
+        response = await signed_in.get("/reportes")
         assert "No hubo pagos en este mes" in visible_text(response)
 
 
 class TestTheCsv:
     @pytest.fixture(autouse=True)
-    async def a_payment(self, scope: AccountScope, account: Account, customer: Client):
+    async def a_payment(
+        self, scope: AccountScope, account: Account, customer: Client, paid: Account
+    ):
+        """La descarga es función de pago desde el hito 6 (§11.1)."""
         return await charge(
             scope,
             account,
@@ -830,7 +866,12 @@ class TestTheEnglishSurfaceOfSection6:
         assert response.headers["location"] == "/reportes?period=2026-01"
 
     async def test_the_documented_url_lands_on_the_right_month(
-        self, signed_in: AsyncClient, scope: AccountScope, account: Account, customer: Client
+        self,
+        signed_in: AsyncClient,
+        scope: AccountScope,
+        account: Account,
+        customer: Client,
+        paid: Account,
     ) -> None:
         await charge(
             scope,
@@ -849,7 +890,9 @@ class TestTheEnglishSurfaceOfSection6:
         assert "enero de 2026" in visible_text(response).lower()
         assert "$600.00" in visible_text(response)
 
-    async def test_reports_monthly_csv_downloads(self, signed_in: AsyncClient) -> None:
+    async def test_reports_monthly_csv_downloads(
+        self, signed_in: AsyncClient, paid: Account
+    ) -> None:
         response = await signed_in.get("/reports/monthly.csv?period=2026-01", follow_redirects=True)
 
         assert response.status_code == 200

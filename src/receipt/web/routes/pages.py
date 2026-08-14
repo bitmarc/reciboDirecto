@@ -17,8 +17,11 @@ from fastapi.responses import RedirectResponse
 from starlette.requests import Request
 from starlette.responses import Response
 
+from receipt.domain.accounting import SERIES_MONTHS
+from receipt.domain.clock import current_period
 from receipt.services.accounting import overview
-from receipt.web.dependencies import CurrentAccount, Scope
+from receipt.services.plans import allowance_of, entitlements, visible_periods
+from receipt.web.dependencies import CurrentAccount, DbSession, Scope
 from receipt.web.templating import render
 
 router = APIRouter(tags=["pages"])
@@ -36,11 +39,27 @@ _API_ALIASES = {
 
 
 @router.get("/")
-async def dashboard(request: Request, scope: Scope, account: CurrentAccount) -> Response:
+async def dashboard(
+    request: Request, scope: Scope, db: DbSession, account: CurrentAccount
+) -> Response:
+    rights = entitlements(account)
+    current = current_period()
     return render(
         request,
         "dashboard.html",
-        {"account": account, "overview": await overview(scope)},
+        {
+            "account": account,
+            # RN-35: en gratuito la gráfica se recorta a la ventana del plan.
+            # Las dos cifras de §7.4 y "quién me debe" salen completas.
+            "overview": await overview(
+                scope,
+                period=current,
+                periods=visible_periods(rights, period=current, span=SERIES_MONTHS),
+            ),
+            "rights": rights,
+            "allowance": await allowance_of(db, account),
+            "full_series_months": SERIES_MONTHS,
+        },
     )
 
 

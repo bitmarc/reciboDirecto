@@ -4,21 +4,31 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ report.label | capitalize }}</h1>
-  <a class="button button--secondary button--inline"
-     href="/reportes/mensual.csv?periodo={{ report.period }}">Descargar CSV</a>
+  {% if rights.can_download_report %}
+    <a class="button button--secondary button--inline"
+       href="/reportes/mensual.csv?periodo={{ report.period }}">Descargar CSV</a>
+  {% endif %}
 </div>
 
 <section class="card">
   <nav class="filters">
-    <a class="tag" href="/reportes?periodo={{ report.previous_period }}">
-      ← {{ report.previous_period | mes }}
-    </a>
+    {% if not earliest_period or report.previous_period >= earliest_period %}
+      <a class="tag" href="/reportes?periodo={{ report.previous_period }}">
+        ← {{ report.previous_period | mes }}
+      </a>
+    {% endif %}
     {% if report.next_period %}
       <a class="tag" href="/reportes?periodo={{ report.next_period }}">
         {{ report.next_period | mes }} →
       </a>
     {% endif %}
   </nav>
+  {% if not rights.paid %}
+    <p class="muted">
+      El plan gratuito muestra el mes en curso y no descarga el CSV.
+      <a href="/planes">Ver los planes</a>
+    </p>
+  {% endif %}
 </section>
 
 <section class="card figure">

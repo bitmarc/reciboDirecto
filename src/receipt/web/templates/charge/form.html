@@ -9,6 +9,15 @@
    trabajos abiertos, por HTMX: son datos, no pasos (AC-19). #}
 
 {% block content %}
+{% if allowance and allowance.warning %}
+  {# §14.3: enterarse del muro con el efectivo en la mano no produce una
+     conversión, produce un abandono. El aviso llega antes de teclear nada. #}
+  <p class="alert alert--notice">
+    Te quedan {{ allowance.remaining }} recibo{{ '' if allowance.remaining == 1 else 's' }}
+    este mes en el plan gratuito. <a href="/planes">Ver los planes</a>
+  </p>
+{% endif %}
+
 <form method="post" action="/cobrar" id="cobro" class="cobro">
   <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
   {# La genera el servidor al pintar la pantalla: el doble toque manda la misma
