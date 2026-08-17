@@ -426,3 +426,41 @@ h2 { font-size: 1.125rem; margin: 0 0 0.75rem; }
 .htmx-indicator { display: none; }
 .htmx-request .htmx-indicator,
 .htmx-request.htmx-indicator { display: inline; }
+
+/* Pie y avisos legales ----------------------------------------------------- */
+
+.footer {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  text-align: center;
+}
+
+.footer a { color: var(--ink-soft); font-size: 0.875rem; }
+
+/* El aviso de privacidad es lo único del producto que se lee de corrido, no de
+   un vistazo: renglón más alto y ancho de columna más corto que el resto. */
+.legal { line-height: 1.65; }
+
+.legal h2 {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-size: 1.25rem;
+}
+
+.legal h3 { margin-top: 1.75rem; font-size: 1.0625rem; }
+.legal h4 { margin: 0 0 0.25rem; font-size: 1rem; }
+.legal ul { padding-left: 1.25rem; }
+.legal li { margin-bottom: 0.4rem; }
+
+.legal__vigencia { color: var(--ink-soft); font-size: 0.9375rem; margin-top: -0.5rem; }
+
+.legal__categoria {
+  margin: 1.25rem 0;
+  padding-left: 0.875rem;
+  border-left: 3px solid var(--line);
+}
+
+.legal__categoria .muted { margin: 0 0 0.5rem; }
+.legal__categoria ul { margin: 0; }

@@ -401,6 +401,9 @@ Qué hace cada una y por qué importa:
 | `MAIL_BACKEND` | `console` | Acepta `console`, `memory` o `azure`. Cualquier otro valor **impide arrancar**. Ver [§8.1](#81-el-correo-el-adaptador-ya-existe-hay-que-dar-de-alta-los-recursos). |
 | `ACS_CONNECTION_STRING` | — | Solo con `MAIL_BACKEND=azure`, donde es **obligatoria**: sin ella el contenedor no levanta. Ver [`correo-azure-alta.md`](correo-azure-alta.md). |
 | `ACS_SENDER_ADDRESS` | — | Igual que la anterior. Es la dirección pelada del remitente, sin nombre visible. |
+| `LEGAL_RESPONSABLE` | — | Nombre o razón social de quien responde por los datos. **Obligatoria en producción**: el art. 15 de la LFPDPPP la exige en el aviso de privacidad. |
+| `LEGAL_DOMICILIO` | — | Domicilio del responsable. Obligatoria en producción, por lo mismo. |
+| `LEGAL_CONTACTO_ARCO` | — | Correo para ejercer los derechos ARCO. **Tiene que recibir de verdad**: el remitente de Communication Services es `DoNotReply` y solo envía. |
 
 > **Sobre `?ssl=require`, y por qué no `sslmode`.** Ambas cosas están
 > comprobadas contra la versión que usa el proyecto (SQLAlchemy 2.0.51 sobre
@@ -728,7 +731,7 @@ corriendo ni se puede volver atrás cambiando una línea.
 | El PDF da error 500 | Casi siempre es el almacenamiento, no WeasyPrint: las imágenes se descargan del blob antes de renderizar. |
 | La liga compartida abre `localhost` | `PUBLIC_BASE_URL` quedó con el valor de desarrollo. |
 | `/docs` responde 200 | `ENVIRONMENT` no es `production`. |
-| El contenedor arranca y muere al instante | Un valor inválido en `MAIL_BACKEND` (solo `console`, `memory` o `azure`), o `azure` sin `ACS_CONNECTION_STRING` / `ACS_SENDER_ADDRESS`. El registro nombra cuál falta. |
+| El contenedor arranca y muere al instante | Un valor inválido en `MAIL_BACKEND` (solo `console`, `memory` o `azure`); `azure` sin `ACS_CONNECTION_STRING` / `ACS_SENDER_ADDRESS`; o producción sin los tres `LEGAL_*`. El registro nombra cuál falta. |
 | «Enviar por correo» responde 502 | El proveedor rechazó el envío. Con dominio gestionado, casi siempre es la cuota: 10/hora. Ver [`correo-azure-alta.md`](correo-azure-alta.md) §8. |
 
 ---
@@ -752,6 +755,9 @@ corriendo ni se puede volver atrás cambiando una línea.
 | `MAIL_FROM` | no | `Recibo <no-responder@recibo.mx>` — solo lo usa `console` |
 | `ACS_CONNECTION_STRING` | **sí con `azure`** | `endpoint=https://…;accesskey=…` |
 | `ACS_SENDER_ADDRESS` | **sí con `azure`** | `DoNotReply@<guid>.azurecomm.net` |
+| `LEGAL_RESPONSABLE` | **sí en producción** | Nombre o razón social |
+| `LEGAL_DOMICILIO` | **sí en producción** | Domicilio del responsable |
+| `LEGAL_CONTACTO_ARCO` | **sí en producción** | Un buzón que reciba |
 | `LOGIN_MAX_ATTEMPTS` | no | `8` |
 | `LOGIN_WINDOW_SECONDS` | no | `300` |
 | `PUBLIC_RECEIPT_MAX_REQUESTS` | no | `60` |

@@ -32,6 +32,13 @@
     {% block content %}{% endblock %}
   </main>
 
+  {# El pie vive aquí para que el aviso quede a la vista también en registro y
+     en el inicio de sesión, que es donde alguien decide si entrega sus datos
+     (§10). Ponerlo pantalla por pantalla garantizaría olvidarse de una. #}
+  <footer class="footer">
+    <a href="/privacidad">Aviso de privacidad</a>
+  </footer>
+
   {% block scripts %}{% endblock %}
 </body>
 </html>

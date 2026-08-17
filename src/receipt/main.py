@@ -18,6 +18,7 @@ from receipt.web.routes import (
     auth,
     charge,
     clients,
+    legal,
     pages,
     plans,
     public,
@@ -61,6 +62,10 @@ def create_app() -> FastAPI:
     app.include_router(receipts.router)
     app.include_router(reports.router)
     app.include_router(plans.router)
+    # El aviso de privacidad va sin sesión: quien aún no se registra necesita
+    # leerlo antes, y quien pide que borren sus datos suele haber perdido el
+    # acceso (§10).
+    app.include_router(legal.router)
     # La liga pública no lleva sesión ni CSRF: el token es la credencial (§3.3).
     app.include_router(public.router)
     # Las páginas van al final: registran los alias de §6, que son comodines

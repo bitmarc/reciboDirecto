@@ -178,6 +178,18 @@ de enviarlo. La liga de recuperación aparece en `docker compose logs -f app`.
 arranca, a propósito. El alta de los recursos está en
 [`docs/correo-azure-alta.md`](docs/correo-azure-alta.md).
 
+### Aviso de privacidad
+
+`/privacidad` se sirve sin sesión: quien aún no se registra necesita leerlo
+antes de entregar sus datos. La identidad del responsable sale de
+`LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO` y `LEGAL_CONTACTO_ARCO`, **obligatorias en
+producción** porque el art. 15 de la LFPDPPP las exige.
+
+El inventario de datos que declara el aviso vive en `web/legal.py`, no en la
+plantilla, y `tests/unit/test_legal_inventory.py` recorre el esquema real para
+que una columna nueva sin clasificar rompa la suite. Es lo que impide que el
+aviso se vuelva mentira en silencio.
+
 ---
 
 ## Estado

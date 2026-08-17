@@ -45,6 +45,15 @@
       font-size: 0.9375rem;
       text-align: center;
     }
+    .rc-privacidad {
+      margin: 6mm auto 0;
+      max-width: 150mm;
+      color: #6b7280;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .rc-privacidad a { color: inherit; }
     @media print {
       body { background: #fff; padding: 0; }
       .receipt { box-shadow: none; }
@@ -63,6 +72,20 @@
     <p class="rc-keep">
       Guarda tu copia. Este comprobante está disponible en línea, pero te
       recomendamos descargarlo.
+    </p>
+
+    {# §10: quien abre esta página ve su nombre y a veces su propia firma, y
+       hasta aquí no tenía forma de saber quién los guarda. El responsable es el
+       emisor —lo dice el snapshot, así que se nombra al que emitió *este*
+       comprobante—, no la plataforma.
+
+       Es una línea de texto y una liga interna: sin cookies y sin terceros, que
+       es lo que §7.3 protege de esta página. #}
+    <p class="rc-privacidad">
+      Los datos de este comprobante los resguarda
+      <strong>{{ doc.snapshot.issuer.display_name }}</strong>, a quien puedes
+      dirigirte para consultarlos o corregirlos.
+      <a href="/privacidad">Cómo se tratan los datos en esta plataforma</a>.
     </p>
   </div>
 </body>

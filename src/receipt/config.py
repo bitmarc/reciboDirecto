@@ -43,6 +43,18 @@ class Settings(BaseSettings):
 
     public_base_url: str = "http://localhost:8000"
 
+    # Identidad del responsable en el aviso de privacidad (§10). El art. 15 de
+    # la LFPDPPP exige nombre y domicilio, y un canal por el que se puedan
+    # ejercer los derechos ARCO.
+    #
+    # Van en configuración y no en la plantilla por dos razones: el domicilio de
+    # quien opera esto no tiene por qué vivir en el repositorio, y el correo de
+    # contacto **tiene que recibir de verdad** — el remitente de Communication
+    # Services es `DoNotReply` y solo envía, así que no sirve para esto.
+    legal_responsable: str = ""
+    legal_domicilio: str = ""
+    legal_contacto_arco: str = ""
+
     # Intentos permitidos por ventana en login y recuperación de contraseña (§10).
     login_max_attempts: int = 8
     login_window_seconds: int = 300
@@ -76,6 +88,34 @@ class Settings(BaseSettings):
             ]
             if faltantes:
                 raise ValueError(f"MAIL_BACKEND=azure exige {' y '.join(faltantes)}.")
+        return self
+
+    @model_validator(mode="after")
+    def _check_legal_identity(self) -> "Settings":
+        """En producción, publicar el aviso sin responsable identificable no.
+
+        El art. 15 de la LFPDPPP exige identidad, domicilio y un mecanismo para
+        ejercer los derechos ARCO. Un aviso publicado sin ellos es defectuoso, y
+        a diferencia de un contenedor que no levanta, **nadie lo nota**: la
+        página se ve bien y el hueco solo aparece cuando alguien reclama.
+
+        Fuera de producción se admiten vacíos: exigirlos rompería el desarrollo
+        local y la suite sin proteger a nadie.
+        """
+        if self.environment == "production":
+            faltantes = [
+                nombre
+                for nombre, valor in (
+                    ("LEGAL_RESPONSABLE", self.legal_responsable),
+                    ("LEGAL_DOMICILIO", self.legal_domicilio),
+                    ("LEGAL_CONTACTO_ARCO", self.legal_contacto_arco),
+                )
+                if not valor.strip()
+            ]
+            if faltantes:
+                raise ValueError(
+                    f"El aviso de privacidad exige {' y '.join(faltantes)} en producción."
+                )
         return self
 
     @property

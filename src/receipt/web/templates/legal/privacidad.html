@@ -1,0 +1,269 @@
+{# Aviso de privacidad — §10 del PRD, art. 15 de la LFPDPPP.
+
+   El orden de las secciones sigue el contenido mínimo que exige el art. 15:
+   identidad y domicilio, datos tratados identificando los sensibles,
+   finalidades distinguiendo las que requieren consentimiento, medios para
+   limitar uso o divulgación, mecanismos para ejercer los derechos ARCO y el
+   procedimiento para comunicar cambios.
+
+   Está escrito para que lo entienda un electricista, no un abogado. Si una
+   frase necesita saber cómo está hecho el producto para entenderse, está mal
+   escrita. #}
+{% extends "base.html" %}
+{% block title %}Aviso de privacidad — Recibo{% endblock %}
+
+{# Fuera de producción la identidad puede venir vacía, y un `mailto:` sin
+   dirección es una liga rota. Se degrada a texto en vez de fingir un enlace. #}
+{% macro contacto() -%}
+  {%- if identidad.contacto -%}
+    <a href="mailto:{{ identidad.contacto }}">{{ identidad.contacto }}</a>
+  {%- else -%}
+    <em>(sin configurar)</em>
+  {%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<article class="legal">
+  <h1>Aviso de privacidad</h1>
+  <p class="legal__vigencia">Vigente desde el {{ vigente_desde }}.</p>
+
+  {% if not identidad.completa %}
+  {# Solo puede verse fuera de producción: allá el arranque falla si faltan. #}
+  <p class="alert alert--error">
+    Faltan los datos del responsable en la configuración
+    (<code>LEGAL_RESPONSABLE</code>, <code>LEGAL_DOMICILIO</code>,
+    <code>LEGAL_CONTACTO_ARCO</code>). Este aviso está incompleto.
+  </p>
+  {% endif %}
+
+  <h2>1. Quién responde por tus datos</h2>
+  <p>
+    <strong>{{ identidad.responsable or "—" }}</strong>, con domicilio en
+    {{ identidad.domicilio or "—" }}, es responsable del tratamiento de tus datos
+    personales y del uso que se les dé. En este documento nos referimos a ese
+    responsable como «Recibo» o «nosotros».
+  </p>
+
+  <h2>2. Hay dos relaciones distintas, y conviene no confundirlas</h2>
+  <p>
+    Esta plataforma trata dos clases de datos con dos papeles diferentes, y de
+    eso depende a quién le reclamas si algo sale mal.
+  </p>
+  <ul>
+    <li>
+      <strong>Tus datos, los del emisor.</strong> De estos somos responsables.
+      Los recabamos directamente de ti cuando creas tu cuenta y cuando usas la
+      plataforma.
+    </li>
+    <li>
+      <strong>Los datos de tus clientes.</strong> De estos <strong>el
+      responsable eres tú</strong>. Nosotros somos únicamente encargados: los
+      guardamos y los procesamos por cuenta tuya, siguiendo tus instrucciones, y
+      no los usamos para nada propio. Tú decides qué capturas de cada cliente,
+      para qué, y tú eres quien debe informarles y atender lo que te pidan.
+    </li>
+  </ul>
+  <p>
+    Dicho en corto: si eres cliente de un electricista y quieres saber por qué
+    tiene tu nombre y tu firma, quien tiene que responderte es el electricista,
+    no nosotros. Lo que sí hacemos es ponerle a él las herramientas para hacerlo.
+  </p>
+
+  <h2>3. Qué datos tratamos</h2>
+
+  <h3>Tuyos, como emisor</h3>
+  {% for categoria in del_emisor %}
+  <section class="legal__categoria">
+    <h4>{{ categoria.titulo }}</h4>
+    <p class="muted">{{ categoria.para_que }}</p>
+    <ul>
+      {% for dato in categoria.datos %}<li>{{ dato }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+
+  <h3>De tus clientes, que guardamos por cuenta tuya</h3>
+  {% for categoria in de_los_clientes %}
+  <section class="legal__categoria">
+    <h4>{{ categoria.titulo }}</h4>
+    <p class="muted">{{ categoria.para_que }}</p>
+    <ul>
+      {% for dato in categoria.datos %}<li>{{ dato }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+
+  <h3>Datos técnicos</h3>
+  <ul>
+    {% for dato in tecnicos %}<li>{{ dato }}</li>{% endfor %}
+  </ul>
+
+  <h3>Datos personales sensibles</h3>
+  <p>
+    <strong>No recabamos datos personales sensibles.</strong> No pedimos ni
+    guardamos nada sobre origen racial o étnico, estado de salud, información
+    genética, creencias religiosas o filosóficas, opiniones políticas ni
+    preferencia sexual.
+  </p>
+  <p>
+    La firma merece una aclaración. Una firma escrita a mano no entra en esas
+    categorías, así que legalmente no es un dato sensible; aun así la tratamos
+    con el mismo cuidado que si lo fuera, porque una firma suelta sirve para
+    suplantar a alguien. Las imágenes de firmas viven en un contenedor privado y
+    <strong>solo se sirven a través de la aplicación</strong>: no existe ninguna
+    dirección pública que apunte directamente al archivo.
+  </p>
+
+  <h2>4. Para qué los usamos</h2>
+  <p>Todas nuestras finalidades son necesarias para darte el servicio:</p>
+  <ul>
+    <li>Crear tu cuenta, identificarte al entrar y devolverte el acceso si lo pierdes.</li>
+    <li>Emitir los comprobantes y conservarlos tal como los emitiste.</li>
+    <li>Entregarle a tu cliente su comprobante por la liga, por correo o en PDF.</li>
+    <li>Mostrarte tu panel de ingresos, lo que te deben y tus reportes.</li>
+    <li>Cobrarte el plan, cuando tienes uno de pago, y aplicar los límites del gratuito.</li>
+    <li>Mantener el servicio seguro: limitar intentos de acceso y detectar abusos.</li>
+  </ul>
+  <p>
+    <strong>No tenemos finalidades secundarias.</strong> No usamos tus datos ni
+    los de tus clientes para mercadotecnia, no armamos perfiles, no los vendemos,
+    no los cedemos ni los compartimos con anunciantes. No hay nada que
+    necesites autorizar aparte del servicio mismo, porque no hacemos nada aparte
+    del servicio mismo.
+  </p>
+
+  <h2>5. Dónde viven tus datos y quién nos ayuda a guardarlos</h2>
+  <p>
+    La plataforma se apoya en proveedores de infraestructura que tratan los datos
+    por cuenta nuestra, con las mismas obligaciones que nosotros. Legalmente son
+    <em>encargados</em>, no terceros: no pueden usar los datos para fines
+    propios.
+  </p>
+  <ul>
+    <li>
+      <strong>Microsoft Azure</strong> — la aplicación, los archivos (firmas,
+      logos y PDF) y el envío de correo. Región <strong>West US 2, Estados
+      Unidos</strong>; el servicio de correo, también en Estados Unidos.
+    </li>
+    <li>
+      <strong>Neon</strong> — la base de datos, alojada sobre Amazon Web Services
+      en la región <strong>US West 2 (Oregón), Estados Unidos</strong>.
+    </li>
+  </ul>
+  <p>
+    Esto significa que <strong>tus datos y los de tus clientes se procesan y
+    almacenan fuera de México</strong>, en Estados Unidos. Te lo decimos porque
+    tienes derecho a saberlo antes de decidir si usas la plataforma.
+  </p>
+  <p>
+    Fuera de estos encargados, <strong>no transferimos datos a nadie</strong>,
+    salvo que una autoridad competente nos lo requiera por escrito y conforme a
+    la ley.
+  </p>
+
+  <h2>6. Cómo limitar el uso o la divulgación de tus datos</h2>
+  <p>
+    Puedes pedirnos en cualquier momento que dejemos de enviarte correos que no
+    sean indispensables para el servicio, escribiendo a {{ contacto() }}.
+    Los correos indispensables —la confirmación de tu cuenta y la liga para
+    recuperar tu contraseña— no se pueden desactivar, porque sin ellos no
+    podrías entrar.
+  </p>
+
+  <h2>7. Tus derechos ARCO y cómo ejercerlos</h2>
+  <p>
+    Tienes derecho a <strong>acceder</strong> a tus datos, a
+    <strong>rectificarlos</strong> cuando sean inexactos, a
+    <strong>cancelarlos</strong> y a <strong>oponerte</strong> a su tratamiento.
+  </p>
+  <p>
+    Para ejercerlos, escribe a {{ contacto() }}
+    diciendo quién eres, cómo podemos contactarte, qué derecho quieres ejercer y
+    sobre qué datos. Puede que te pidamos una identificación oficial: es para
+    asegurarnos de que no le estamos entregando tus datos a otra persona.
+  </p>
+  <p>
+    Te responderemos en un plazo máximo de <strong>veinte días</strong> contados
+    desde que recibimos tu solicitud, y si procede la haremos efectiva dentro de
+    los <strong>quince días</strong> siguientes.
+  </p>
+
+  <h3>Un límite honesto sobre la rectificación</h3>
+  <p>
+    <strong>Un comprobante ya emitido no se modifica. Nunca.</strong> Su
+    contenido queda congelado en el momento de emitirlo, y por eso cambiar tu
+    nombre, tu teléfono o el nombre de un cliente no altera los recibos que ya
+    entregaste.
+  </p>
+  <p>
+    No es una limitación técnica que no hayamos querido resolver: es lo que hace
+    que el comprobante sirva. Un documento que puede cambiar hacia atrás no
+    prueba nada, y tu cliente guardó el suyo confiando en que dice hoy lo mismo
+    que decía cuando lo recibió.
+  </p>
+  <p>
+    Una rectificación, entonces, corrige tus datos vivos y todos los
+    comprobantes que emitas de ahí en adelante. Si un comprobante ya emitido
+    tiene un error, la vía es cancelarlo —queda visible como cancelado, con su
+    motivo— y emitir uno nuevo.
+  </p>
+
+  <h2>8. Cuánto tiempo conservamos los datos</h2>
+  <p>
+    Mientras tu cuenta exista, conservamos tus datos y los de tus clientes para
+    poder darte el servicio.
+  </p>
+  <p>
+    Si pides que borremos tu cuenta, hay un periodo de gracia de
+    <strong>90 días</strong> durante el cual puedes arrepentirte y recuperarla.
+    Pasado ese plazo eliminamos tu perfil y los datos de tus clientes.
+  </p>
+  <p>
+    <strong>Con una excepción, y es a favor de tus clientes.</strong> La liga de
+    cada comprobante que ya entregaste sigue funcionando, junto con el
+    comprobante que muestra. Esa liga es de la persona a la que se la diste: ella
+    la guardó como constancia de que te pagó, y no sería correcto que su
+    comprobante desapareciera porque tú cerraste tu cuenta. Se conserva
+    únicamente el comprobante, no tu perfil ni tu directorio de clientes.
+  </p>
+
+  <h2>9. Cookies y rastreo</h2>
+  <p>
+    Usamos <strong>una sola cookie</strong>, la de tu sesión. Va firmada, sirve
+    para no pedirte la contraseña en cada pantalla y se borra cuando sales.
+  </p>
+  <p>
+    <strong>No usamos analíticas de terceros, ni píxeles, ni publicidad, en
+    ninguna parte del sitio.</strong> La página donde tu cliente ve su
+    comprobante no pone cookies en absoluto y no carga nada de ningún otro
+    dominio.
+  </p>
+
+  <h2>10. Cómo protegemos los datos</h2>
+  <ul>
+    <li>Tu contraseña se guarda como huella irreversible con Argon2id; nadie puede leerla, nosotros tampoco.</li>
+    <li>Las firmas, los logos y los PDF viven en almacenamiento privado y solo se sirven a través de la aplicación.</li>
+    <li>Cada consulta va acotada a tu cuenta, de modo que nadie puede ver los datos de otra.</li>
+    <li>La liga pública de un comprobante usa un identificador aleatorio imposible de adivinar, y está limitada contra intentos automatizados.</li>
+    <li>Todo el tráfico va cifrado.</li>
+  </ul>
+
+  <h2>11. Cambios a este aviso</h2>
+  <p>
+    Si cambiamos este aviso, publicaremos la versión nueva en esta misma página
+    con su fecha de vigencia. Cuando el cambio sea importante —por ejemplo, si
+    alguna vez tratáramos datos nuevos o cambiáramos de proveedor de
+    infraestructura— además te lo avisaremos por correo a la dirección de tu
+    cuenta, antes de que entre en vigor.
+  </p>
+
+  <h2>12. Si no estás conforme</h2>
+  <p>
+    Si consideras que no atendimos bien tu solicitud o que tus datos se usaron
+    indebidamente, puedes acudir a la
+    <strong>Secretaría Anticorrupción y Buen Gobierno</strong>, que es la
+    autoridad que atiende la protección de datos personales en posesión de
+    particulares.
+  </p>
+</article>
+{% endblock %}

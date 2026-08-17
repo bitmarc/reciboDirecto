@@ -61,6 +61,13 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["BLOB_CONTAINER"] = "receipts-test"
 os.environ["MAIL_BACKEND"] = "memory"
 
+# Identidad del responsable en el aviso de privacidad. En producción el arranque
+# falla sin ellas; aquí se fijan para que las pruebas ejerciten el aviso
+# completo y no la rama de «faltan datos».
+os.environ["LEGAL_RESPONSABLE"] = "Recibo Pruebas, S.A. de C.V."
+os.environ["LEGAL_DOMICILIO"] = "Calle de Prueba 1, Ciudad de México"
+os.environ["LEGAL_CONTACTO_ARCO"] = "privacidad@example.mx"
+
 from receipt.db import get_db_session  # noqa: E402
 from receipt.infra.blob import BlobStore, get_blob_store, reset_blob_store  # noqa: E402
 from receipt.infra.mail import (  # noqa: E402

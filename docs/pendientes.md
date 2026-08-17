@@ -1,7 +1,8 @@
 # Pendientes y deuda técnica
 
-**Estado:** hitos 0–6 completos, 549 pruebas en verde.
-**Fecha de este corte:** 12 de agosto de 2026.
+**Estado:** hitos 0–6 completos, correo y aviso de privacidad enchufados,
+609 pruebas en verde.
+**Fecha de este corte:** 14 de agosto de 2026.
 **Para qué sirve:** retomar el proyecto sin tener que reconstruir de memoria qué
 quedó a medias y por qué. Cada punto dice **dónde vive**, **por qué importa** y
 **qué significa terminarlo**.
@@ -32,24 +33,41 @@ lista se le añade ahora la **cadena de conexión de Communication Services**.
 Estos dos no son deuda: son requisitos que el PRD pone antes de que alguien
 ajeno use el producto.
 
-### 1.1 Aviso de privacidad y términos — §10
+### 1.1 Aviso de privacidad — publicado; términos, pendientes
 
-**No existe ninguna ruta.** §10 lo declara obligatorio *antes del primer usuario
-real* y fija el contenido mínimo: el **emisor** es el responsable del tratamiento
-de los datos de sus clientes, y la plataforma el **encargado**.
+**Actualizado el 14 de agosto de 2026.** `/privacidad` existe, con enlace desde
+el pie de todas las pantallas —registro e inicio de sesión incluidos— y una
+línea en la página pública del recibo que manda al cliente con el **emisor**,
+que es su responsable. 34 pruebas nuevas.
 
-Dos cosas lo complican más de lo que parece:
+**Dos correcciones al diagnóstico anterior**, que estaba equivocado en los dos
+puntos:
 
-- **Con Neon como base de datos** (ver `docs/despliegue-azure.md`, opción B) se
-  incorpora un **subencargado**. La LFPDPPP admite la transferencia; lo que no
-  admite es omitirla. El aviso tiene que nombrarlo y decir en qué país viven los
-  datos.
-- **Depende de §14.2**, que sigue abierta (§2 de este documento).
+- **El marco legal es otro.** Rige la LFPDPPP publicada el **20 de marzo de
+  2025**, que abrogó la de 2010. El **INAI está extinto** y sus funciones pasaron
+  a la **Secretaría Anticorrupción y Buen Gobierno**. Hay una prueba que falla si
+  alguien vuelve a meter «INAI» en el texto, porque es el error que llega pegando
+  plantillas viejas.
+- **§14.2 no bloqueaba.** El art. 15 fija el contenido mínimo del aviso y **el
+  plazo de conservación no está en esa lista**. El aviso se publica con un canal
+  ARCO **manual**, que es legalmente suficiente: la ley no exige autoservicio.
 
-**Terminado significa:** dos rutas públicas (`/privacidad`, `/terminos`), enlace
-desde el pie de las pantallas de registro y login, y el texto revisado por
-alguien con criterio legal. El PRD advierte explícitamente que su orientación
-sobre §14.2 *no es asesoría legal*.
+Lo que sí quedó decidido y conviene poder revisar: **90 días de gracia** tras el
+borrado, siguiendo la orientación de §14.2, y la conservación del comprobante
+mientras la liga viva —RN-30 y RN-31— porque ese derecho es del tercero, no del
+emisor.
+
+**Falta:**
+
+- **Revisión legal.** El texto se apoya en el art. 15 de la ley vigente y es
+  específico de este producto, pero tiene efectos jurídicos y no lo escribió un
+  abogado.
+- **Un buzón que reciba.** `LEGAL_CONTACTO_ARCO` tiene que ser una dirección
+  real: el remitente de Communication Services es `DoNotReply` y solo envía.
+- **`/terminos`**, que sí depende de §14.2 de lleno: el proceso de borrado, la
+  reversión y la responsabilidad son su contenido, no el del aviso.
+- **La ruta de borrado de cuenta** (§3.4). El aviso promete un mecanismo ARCO y
+  hoy se atiende a mano, lo cual cumple; automatizarlo sigue pendiente.
 
 ### 1.2 Adaptador de correo — código listo, infraestructura sin dar de alta
 
@@ -100,7 +118,9 @@ cancelación bajo la LFPDPPP. La orientación del documento es separar **gracia 
 reversión** (30–90 días) de **retención posterior**, que solo procede con causa
 jurídica declarada y limitada al comprobante, no al perfil completo.
 
-**Bloquea:** la publicación de términos (§1.1). No bloquea desarrollo.
+**Bloquea:** la publicación de `/terminos` (§1.1) y la ruta de borrado de cuenta
+(§3.4). **Ya no bloquea el aviso de privacidad**, que se publicó con 90 días de
+gracia declarados y revisables. No bloquea desarrollo.
 **Necesita:** un abogado, no una decisión de producto.
 
 ### §14.5 — Pasarela de pago: Mercado Pago vs Stripe
@@ -275,10 +295,10 @@ El arreglo natural ya está a mano: `record_issuance` devuelve el contador
 después de incrementar de forma atómica, así que bastaría comprobar ahí y dejar
 que la transacción se deshaga.
 
-### 4.5 `docs/` e `infra/` siguen sin versionar
+### 4.5 ~~`docs/` e `infra/` siguen sin versionar~~ — RESUELTO
 
-`git status` los muestra como no rastreados desde el despliegue. `docs/` debería
-entrar al repositorio; `infra/envs.txt`, nunca (§0).
+**Cerrado el 13 de agosto de 2026.** `docs/` entró al repositorio con el commit
+del correo; `infra/envs.txt` está ignorado (§0).
 
 ---
 
@@ -308,8 +328,8 @@ Si hay poco tiempo, este es el orden:
 2. **Adaptador de correo real.** Desbloquea tres flujos ya construidos, y la
    verificación de dominio tarda días de calendario: conviene empezarla antes de
    necesitarla.
-3. **Aviso de privacidad y términos.** Requisito de §10 antes del primer usuario
-   real, y depende de una consulta legal que también tarda.
-4. **Versionar `docs/`.**
+3. **Revisión legal del aviso**, ya publicado, y un buzón real para
+   `LEGAL_CONTACTO_ARCO`. Los `/terminos` siguen esperando a §14.2.
+4. ~~**Versionar `docs/`.**~~ Hecho.
 5. Lo demás espera a tener datos: la pasarela espera a que alguien pida pagar, y
    la calibración del muro espera a `plan_block_event`.
