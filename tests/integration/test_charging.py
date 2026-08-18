@@ -493,7 +493,7 @@ class TestTheTransactionResolvesEverythingAtOnce:
         self, db: AsyncSession, scope: AccountScope, account: Account
     ) -> None:
         """AC-13: el cliente ajeno es indistinguible de uno que no existe."""
-        other = await make_account(db, display_name="Cuenta ajena")
+        other = await make_account(db, person_name="Cuenta ajena")
         foreign = await make_client(db, other, full_name="Cliente Ajeno")
 
         with pytest.raises(ValidationError, match="directorio"):
@@ -591,7 +591,7 @@ class TestFoliosArePerAccount:
             ChargeRequest(client_id=customer.id, concept="Uno", payment_amount_cents=10000),
         )
 
-        other_account = await make_account(db, display_name="Otra cuenta")
+        other_account = await make_account(db, person_name="Otra cuenta")
         other_scope = AccountScope(db, other_account.id)
         other_client = await make_client(db, other_account, full_name="Otro Cliente")
         theirs = await charge(
@@ -673,7 +673,7 @@ class TestUsageCounting:
             account,
             ChargeRequest(client_id=customer.id, concept="Trabajo", payment_amount_cents=10000),
         )
-        other_account = await make_account(db, display_name="Otra cuenta")
+        other_account = await make_account(db, person_name="Otra cuenta")
 
         period = period_of(result.receipt.issued_at)
         assert await issued_in_period(db, account.id, period) == 1

@@ -16,8 +16,8 @@ from receipt.models import Client
 from receipt.repositories import AccountScope
 from receipt.services.accounts import normalize_email
 from receipt.services.errors import ValidationError
+from receipt.services.names import normalize_name, validate_person_name
 
-_WHITESPACE = re.compile(r"\s+")
 _NON_DIGITS = re.compile(r"\D")
 
 MIN_PHONE_DIGITS = 8
@@ -45,31 +45,24 @@ def folded(value: ColumnExpressionArgument[str] | str) -> ColumnElement[str]:
     return func.translate(func.lower(value), _ACCENTED, _PLAIN)
 
 
-def normalize_name(raw: str) -> str:
-    """Recorta y colapsa espacios internos.
-
-    "  Ana   Ramírez " y "Ana Ramírez" son la misma persona; sin normalizar, el
-    buscador y el conteo de palabras verían dos cosas distintas.
-    """
-    return _WHITESPACE.sub(" ", raw).strip()
-
-
 def validate_full_name(raw: str) -> str:
     """§4.2: obligatorio, mínimo nombre + un apellido.
 
     El recibo dice "Recibí de {cliente}" (§8.1). Un nombre de pila suelto no
     identifica a nadie meses después, que es justo cuando se consulta el
     comprobante.
+
+    La regla es la misma que la del emisor y vive en `services/names.py`; aquí
+    solo se le pone el copy del cliente.
     """
-    name = normalize_name(raw)
-    if not name:
-        raise ValidationError("El nombre del cliente es obligatorio.")
-    if len(name.split(" ")) < 2:
-        raise ValidationError(
+    return validate_person_name(
+        raw,
+        missing="El nombre del cliente es obligatorio.",
+        incomplete=(
             "Escribe al menos nombre y un apellido, para que el recibo identifique "
             "a quién le cobraste."
-        )
-    return name
+        ),
+    )
 
 
 def validate_phone(raw: str) -> str:

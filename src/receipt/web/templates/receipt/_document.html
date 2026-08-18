@@ -31,7 +31,9 @@
         {% if doc.logo_data_uri %}
           <img class="rc-logo" src="{{ doc.logo_data_uri }}" alt="">
         {% endif %}
-        <div class="rc-issuer">{{ snapshot.issuer.display_name }}</div>
+        {# §8.1: aquí va la identidad pública —el negocio si lo había al
+           emitir, si no la persona—, resuelta al congelar el snapshot. #}
+        <div class="rc-issuer">{{ doc.issuer_name }}</div>
         {% if snapshot.issuer.occupation %}
           <div class="rc-occupation">{{ snapshot.issuer.occupation }}</div>
         {% endif %}
@@ -146,7 +148,10 @@
           <div class="rc-sign__empty"></div>
         {% endif %}
         <div class="rc-sign__rule">
-          <div class="rc-sign__name">{{ snapshot.issuer.display_name }}</div>
+          {# §8.1: aquí va la **persona**, no el negocio: un negocio no firma.
+             `doc.signer_name` lo resuelve y cubre los recibos de la v1 del
+             snapshot, que se emitieron sin ese dato (RN-10). #}
+          <div class="rc-sign__name">{{ doc.signer_name }}</div>
           <div class="rc-sign__label">Firma de quien recibe el pago</div>
         </div>
       </td>

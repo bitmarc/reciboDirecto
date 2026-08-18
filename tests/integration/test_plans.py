@@ -586,7 +586,7 @@ class TestCoupons:
         from tests.factories import make_account
 
         coupon = await make_coupon(db, code="PRIMEROS", max_redemptions=1)
-        neighbour = await make_account(db, display_name="Otro emisor")
+        neighbour = await make_account(db, person_name="Otro emisor")
         await redeem_coupon(AccountScope(db, neighbour.id), neighbour, "PRIMEROS")
         assert coupon.max_redemptions == 1
 
@@ -615,7 +615,7 @@ class TestCoupons:
         from tests.factories import make_account
 
         await make_coupon(db, code="COMPARTIDO", discount_value=1)
-        neighbour = await make_account(db, display_name="Otro emisor")
+        neighbour = await make_account(db, person_name="Otro emisor")
         await redeem_coupon(AccountScope(db, neighbour.id), neighbour, "COMPARTIDO")
 
         result = await redeem_coupon(scope, account, "COMPARTIDO")

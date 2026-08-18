@@ -72,12 +72,12 @@ class TestTheShareMessage:
     ) -> None:
         """El cliente lo lee en la lista de chats sin abrir nada, y una liga
         pelada parece un fraude."""
-        text = share_text(cobro.receipt, issuer_name=account.display_name)
+        text = share_text(cobro.receipt, issuer_name=account.issuer_name)
 
         assert "$1,800.00" in text
         assert "RB-0001" in text
         assert cobro.receipt.public_token in text
-        assert account.display_name in text
+        assert account.issuer_name in text
 
     async def test_the_public_url_is_absolute(self, cobro) -> None:
         """Va en un mensaje de WhatsApp: una ruta relativa no es pulsable."""
@@ -89,7 +89,7 @@ class TestWhatsApp:
     async def test_it_builds_a_wa_me_link_with_the_country_code(
         self, cobro, customer: Client, account: Account
     ) -> None:
-        url = whatsapp_url(cobro.receipt, customer, issuer_name=account.display_name)
+        url = whatsapp_url(cobro.receipt, customer, issuer_name=account.issuer_name)
 
         assert url is not None
         assert url.startswith("https://wa.me/525598765432?text=")
@@ -102,7 +102,7 @@ class TestWhatsApp:
         self, db: AsyncSession, account: Account, cobro, typed: str
     ) -> None:
         client = await make_client(db, account, full_name="Luis Mendoza", phone=typed)
-        url = whatsapp_url(cobro.receipt, client, issuer_name=account.display_name)
+        url = whatsapp_url(cobro.receipt, client, issuer_name=account.issuer_name)
 
         assert url is not None
         assert url.startswith("https://wa.me/525598765432") or url.startswith(
@@ -114,7 +114,7 @@ class TestWhatsApp:
     ) -> None:
         """Mejor un botón que explica que un chat abierto con un desconocido."""
         client = await make_client(db, account, full_name="Luis Mendoza", phone="123")
-        assert whatsapp_url(cobro.receipt, client, issuer_name=account.display_name) is None
+        assert whatsapp_url(cobro.receipt, client, issuer_name=account.issuer_name) is None
 
     async def test_the_screen_explains_it_instead_of_offering_a_broken_button(
         self, signed_in: AsyncClient, db: AsyncSession, account: Account, scope: AccountScope
@@ -224,7 +224,7 @@ class TestSendingByEmail:
         """`AC-13`, en la ruta que el hito 4 agrega."""
         from tests.factories import make_account
 
-        other = await make_account(db, display_name="Cuenta ajena")
+        other = await make_account(db, person_name="Cuenta ajena")
         other_client = await make_client(
             db, other, full_name="Cliente Ajeno", email="ajeno@example.mx"
         )

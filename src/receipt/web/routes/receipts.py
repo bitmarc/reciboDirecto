@@ -98,8 +98,8 @@ async def _detail_context(
         # entiende, y entonces el botón lo explica en vez de abrir un chat con
         # un número equivocado.
         "public_url": public_url(receipt),
-        "whatsapp_url": whatsapp_url(receipt, context.client, issuer_name=account.display_name),
-        "share_text": share_text(receipt, issuer_name=account.display_name),
+        "whatsapp_url": whatsapp_url(receipt, context.client, issuer_name=account.issuer_name),
+        "share_text": share_text(receipt, issuer_name=account.issuer_name),
     }
 
 
@@ -148,7 +148,7 @@ async def send_by_email(
             receipt,
             context.client,
             render_receipt_pdf_html,
-            issuer_name=account.display_name,
+            issuer_name=account.issuer_name,
         )
     except DomainError as exc:
         detail_context = await _detail_context(scope, blobs, account, receipt)

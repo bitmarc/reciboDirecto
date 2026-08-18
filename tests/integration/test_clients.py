@@ -191,7 +191,7 @@ class TestThroughTheWeb:
     async def test_a_client_of_another_account_is_not_reachable(
         self, signed_in: AsyncClient, db: AsyncSession
     ) -> None:
-        other = await make_account(db, display_name="Otra cuenta")
+        other = await make_account(db, person_name="Otra cuenta")
         foreign = Client(account_id=other.id, full_name="Cliente Ajeno", phone="5500000000")
         db.add(foreign)
         await db.flush()

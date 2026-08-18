@@ -14,7 +14,7 @@
   {# §7.3: la liga no debe indexarse. La cabecera X-Robots-Tag lo repite, porque
      el PDF no tiene <head> donde poner esto. #}
   <meta name="robots" content="noindex, nofollow">
-  <title>Recibo {{ doc.receipt.folio }} — {{ doc.snapshot.issuer.display_name }}</title>
+  <title>Recibo {{ doc.receipt.folio }} — {{ doc.issuer_name }}</title>
   {% include "receipt/_styles.html" %}
   <style>
     /* Esta hoja la pinta solo el navegador: el PDF y la vista de impresión salen
@@ -95,7 +95,7 @@
        es lo que §7.3 protege de esta página. #}
     <p class="rc-privacidad">
       Los datos de este comprobante los resguarda
-      <strong>{{ doc.snapshot.issuer.display_name }}</strong>, a quien puedes
+      <strong>{{ doc.issuer_name }}</strong>, a quien puedes
       dirigirte para consultarlos o corregirlos.
       <a href="/privacidad">Cómo se tratan los datos en esta plataforma</a>.
     </p>

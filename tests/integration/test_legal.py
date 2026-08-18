@@ -168,7 +168,7 @@ class TestLaPaginaDelClienteDelEmisor:
         texto = document_text(response)
 
         assert response.status_code == 200
-        assert account.display_name in texto
+        assert account.issuer_name in texto
         assert "puedes dirigirte para consultarlos o corregirlos" in texto
 
     async def test_it_links_to_the_notice(self, client: AsyncClient, cobro) -> None:

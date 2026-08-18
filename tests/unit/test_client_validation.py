@@ -3,12 +3,12 @@
 import pytest
 
 from receipt.services.clients import (
-    normalize_name,
     validate_full_name,
     validate_optional_email,
     validate_phone,
 )
 from receipt.services.errors import ValidationError
+from receipt.services.names import normalize_name
 
 
 class TestFullName:

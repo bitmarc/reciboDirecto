@@ -21,12 +21,17 @@ from receipt.domain.calculations import balance_cents, current_total_cents
 from receipt.domain.clock import to_local
 from receipt.domain.enums import PaymentMethod
 
-SNAPSHOT_VERSION = 1
+SNAPSHOT_VERSION = 2
 """Versión del formato congelado.
 
 No está en §4.3, pero un recibo emitido hoy se renderiza dentro de cinco años
 con el código de entonces. Sin una marca de formato, evolucionar la estructura
 obliga a adivinar la forma de cada fila, y RN-10 prohíbe reescribirlas.
+
+v2 — se agrega `issuer.signer_name`, la persona que firma, cuando la cuenta
+separó su nombre del de su negocio. Los recibos v1 no la traen y su firma se lee
+de `issuer.display_name` (`services/rendering.py`), que es literalmente lo que
+esos recibos imprimían en esa línea.
 """
 
 MATERIAL_CONCEPT_SUFFIX = "mano de obra y material"
@@ -36,9 +41,19 @@ agregada y **no se desglosa el monto** (RN-14)."""
 
 @dataclass(frozen=True)
 class IssuerFacts:
-    """Datos del emisor tal como estaban al emitir (§8.1)."""
+    """Datos del emisor tal como estaban al emitir (§8.1).
+
+    Los campos se llaman igual que las llaves del snapshot, a propósito: leer
+    `build_snapshot` tiene que bastar para saber qué queda congelado.
+    """
 
     display_name: str
+    """Identidad pública: el nombre del negocio si lo hay, si no el de la
+    persona. Es lo que encabeza el comprobante."""
+
+    signer_name: str
+    """La persona que firma. §8.1 rotula el pie «Firma de quien recibe el pago»."""
+
     phone: str
     occupation: str | None = None
     logo_blob_path: str | None = None
@@ -122,7 +137,15 @@ def build_snapshot(
         "paid_at_local": to_local(paid_at).isoformat(),
         "city": city,
         "issuer": {
+            # La llave se llama `display_name` desde la v1 y **no se renombra**.
+            # Significa lo mismo que siempre: lo que imprime la cabecera (§8.1).
+            # RN-10 prohíbe reescribir un recibo emitido, así que renombrarla
+            # dejaría sin cabecera a todos los recibos anteriores. Lo que cambió
+            # está del lado vivo: ahora la alimenta `Account.issuer_name`.
             "display_name": issuer.display_name,
+            # Nueva en la v2. Los recibos v1 no la traen y el pie cae de vuelta
+            # a `display_name` al renderizar, que es lo que esos recibos decían.
+            "signer_name": issuer.signer_name,
             "phone": issuer.phone,
             "occupation": issuer.occupation,
             # RN-34: en plan gratuito el logo simplemente no entra al snapshot.

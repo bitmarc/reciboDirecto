@@ -57,7 +57,7 @@ async def test_registration_and_login_complete_the_round_trip(client: AsyncClien
         data={
             "email": "electricista@example.mx",
             "password": "contrasena-larga",
-            "display_name": "Juan Pérez",
+            "person_name": "Juan Pérez",
             "phone": "5512345678",
             "default_city": "Ciudad de México",
             "occupation": "Electricista",
@@ -89,7 +89,7 @@ async def test_login_does_not_redirect_to_an_external_site(client: AsyncClient) 
         data={
             "email": "otro@example.mx",
             "password": "contrasena-larga",
-            "display_name": "Otro Emisor",
+            "person_name": "Otro Emisor",
             "phone": "5512345678",
             "default_city": "Ciudad de México",
         },

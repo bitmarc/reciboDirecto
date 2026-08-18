@@ -34,13 +34,15 @@ from receipt.security.passwords import hash_password
 async def make_account(
     db: AsyncSession,
     *,
-    display_name: str = "Juan Pérez",
+    person_name: str = "Juan Pérez",
+    business_name: str | None = None,
     phone: str = "5512345678",
     default_city: str = "Ciudad de México",
     occupation: str | None = "Electricista",
 ) -> Account:
     account = Account(
-        display_name=display_name,
+        person_name=person_name,
+        business_name=business_name,
         phone=phone,
         default_city=default_city,
         occupation=occupation,

@@ -7,8 +7,17 @@
   <p class="muted">Estos datos aparecen en tus recibos. Los puedes cambiar después.</p>
 
   <form method="post" action="/auth/register">
-    <label for="display_name">Tu nombre o el de tu negocio</label>
-    <input id="display_name" name="display_name" value="{{ display_name or '' }}" required autofocus>
+    {# Dos campos y no uno: el nombre de la persona firma el recibo y el del
+       negocio lo encabeza (§8.1). Con un solo campo, quien escribía «Plomería
+       Sánchez» acababa firmando con el nombre de su negocio. #}
+    <label for="person_name">Tu nombre</label>
+    <input id="person_name" name="person_name" value="{{ person_name or '' }}" required autofocus>
+    <p class="muted">Nombre y apellido. Es el nombre que firma tus recibos.</p>
+
+    <label for="business_name">Nombre de tu negocio <span class="muted">(opcional)</span></label>
+    <input id="business_name" name="business_name" value="{{ business_name or '' }}"
+           placeholder="Plomería Sánchez">
+    <p class="muted">Si lo pones, encabeza el recibo. La firma sigue siendo tu nombre.</p>
 
     <label for="occupation">Oficio <span class="muted">(opcional)</span></label>
     <input id="occupation" name="occupation" value="{{ occupation or '' }}"

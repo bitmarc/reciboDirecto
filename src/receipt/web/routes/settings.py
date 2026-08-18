@@ -7,6 +7,7 @@ from starlette.requests import Request
 from receipt.infra.blob import BlobNotFound
 from receipt.infra.mail import MailDeliveryError
 from receipt.security.csrf import verify_csrf
+from receipt.services.accounts import update_profile
 from receipt.services.auth_tokens import send_email_verification
 from receipt.services.errors import DomainError
 from receipt.services.media import remove_logo, store_logo, store_signature
@@ -67,12 +68,13 @@ async def settings_page(
 
 
 @router.post("/ajustes")
-async def update_profile(
+async def save_profile(
     account: CurrentAccount,
     db: DbSession,
-    display_name: str = Form(...),
+    person_name: str = Form(...),
     phone: str = Form(...),
     default_city: str = Form(...),
+    business_name: str = Form(""),
     occupation: str = Form(""),
 ) -> Response:
     """Actualiza el perfil que aparece como emisor en el recibo.
@@ -85,13 +87,19 @@ async def update_profile(
     HTML solo hablan GET y POST; añadir un PATCH que nadie llama sería código
     muerto.
     """
-    if not display_name.strip() or not phone.strip() or not default_city.strip():
-        return _back(error="Nombre, teléfono y ciudad son obligatorios.")
+    try:
+        await update_profile(
+            db,
+            account,
+            person_name=person_name,
+            business_name=business_name,
+            phone=phone,
+            default_city=default_city,
+            occupation=occupation,
+        )
+    except DomainError as exc:
+        return _back(error=exc.message)
 
-    account.display_name = display_name.strip()
-    account.phone = phone.strip()
-    account.default_city = default_city.strip()
-    account.occupation = occupation.strip() or None
     await db.commit()
     return _back("Datos actualizados.")
 

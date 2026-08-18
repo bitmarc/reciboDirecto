@@ -137,7 +137,7 @@ class TestTheKeyIsScopedToTheAccount:
         y no puede hacer que una cuenta vea el recibo de otra (AC-13)."""
         mine = await charge(scope, account, a_charge(customer))
 
-        other_account = await make_account(db, display_name="Otra cuenta")
+        other_account = await make_account(db, person_name="Otra cuenta")
         other_scope = AccountScope(db, other_account.id)
         other_client = await make_client(db, other_account, full_name="Otro Cliente")
         theirs = await charge(

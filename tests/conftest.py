@@ -237,7 +237,7 @@ async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
 REGISTRATION = {
     "email": "electricista@example.mx",
     "password": "contrasena-larga",
-    "display_name": "Juan Pérez",
+    "person_name": "Juan Pérez",
     "phone": "5512345678",
     "default_city": "Ciudad de México",
     "occupation": "Electricista",

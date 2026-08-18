@@ -681,7 +681,7 @@ class TestTheDashboardScreen:
         self, signed_in: AsyncClient, db: AsyncSession
     ) -> None:
         """AC-13, en la pantalla que suma dinero de toda la cuenta."""
-        other = await make_account(db, display_name="Cuenta ajena")
+        other = await make_account(db, person_name="Cuenta ajena")
         other_client = await make_client(db, other, full_name="Cliente Ajeno")
         await charge(
             AccountScope(db, other.id),
@@ -829,7 +829,7 @@ class TestTheCsv:
     async def test_it_only_carries_the_own_account_payments(
         self, signed_in: AsyncClient, db: AsyncSession
     ) -> None:
-        other = await make_account(db, display_name="Cuenta ajena")
+        other = await make_account(db, person_name="Cuenta ajena")
         other_client = await make_client(db, other, full_name="Cliente Ajeno")
         await charge(
             AccountScope(db, other.id),

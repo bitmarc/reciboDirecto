@@ -43,7 +43,8 @@ class TestProfile:
             "/ajustes",
             data={
                 "csrf_token": csrf_token_of(signed_in),
-                "display_name": "Electricidad Pérez",
+                "person_name": "Juan Pérez",
+                "business_name": "Electricidad Pérez",
                 "phone": "5599998888",
                 "default_city": "Naucalpan",
                 "occupation": "Instalaciones residenciales",
@@ -53,7 +54,10 @@ class TestProfile:
 
         assert response.status_code == 303
         account = await only_account(db)
-        assert account.display_name == "Electricidad Pérez"
+        assert account.person_name == "Juan Pérez"
+        assert account.business_name == "Electricidad Pérez"
+        # §8.1: con negocio registrado, la identidad pública es la del negocio.
+        assert account.issuer_name == "Electricidad Pérez"
         assert account.phone == "5599998888"
         assert account.default_city == "Naucalpan"
 
@@ -64,13 +68,101 @@ class TestProfile:
             "/ajustes",
             data={
                 "csrf_token": csrf_token_of(signed_in),
-                "display_name": "  ",
+                "person_name": "  ",
                 "phone": "5599998888",
                 "default_city": "Naucalpan",
             },
             follow_redirects=False,
         )
-        assert (await only_account(db)).display_name == "Juan Pérez"
+        assert (await only_account(db)).person_name == "Juan Pérez"
+
+    async def test_a_person_name_without_a_surname_is_refused(
+        self, signed_in: AsyncClient, db: AsyncSession
+    ) -> None:
+        """§8.1: firma una persona, y un nombre de pila suelto no identifica a
+        nadie meses después."""
+        await signed_in.post(
+            "/ajustes",
+            data={
+                "csrf_token": csrf_token_of(signed_in),
+                "person_name": "Juan",
+                "phone": "5512345678",
+                "default_city": "Ciudad de México",
+            },
+            follow_redirects=False,
+        )
+        assert (await only_account(db)).person_name == "Juan Pérez"
+
+    async def test_the_business_name_can_be_cleared(
+        self, signed_in: AsyncClient, db: AsyncSession
+    ) -> None:
+        """Vaciarlo tiene que dejar `None` y no cadena vacía: es lo que hace que
+        la cuenta vuelva a encabezar con el nombre de la persona."""
+        campos = {
+            "csrf_token": csrf_token_of(signed_in),
+            "person_name": "Juan Pérez",
+            "phone": "5512345678",
+            "default_city": "Ciudad de México",
+        }
+        await signed_in.post(
+            "/ajustes",
+            data=campos | {"business_name": "Electricidad Pérez"},
+            follow_redirects=False,
+        )
+        await signed_in.post(
+            "/ajustes", data=campos | {"business_name": "  "}, follow_redirects=False
+        )
+
+        account = await only_account(db)
+        assert account.business_name is None
+        assert account.issuer_name == "Juan Pérez"
+
+    async def test_a_legacy_one_word_name_does_not_block_an_unrelated_edit(
+        self, signed_in: AsyncClient, db: AsyncSession
+    ) -> None:
+        """Las cuentas anteriores a la separación pueden traer una sola palabra:
+        hasta entonces el campo solo tenía que no ir vacío. Bloquearle a alguien
+        un cambio de teléfono por un campo que ni tocó sería cobrarle un error
+        que no cometió."""
+        account = await only_account(db)
+        account.person_name = "Plomería"
+        await db.commit()
+
+        response = await signed_in.post(
+            "/ajustes",
+            data={
+                "csrf_token": csrf_token_of(signed_in),
+                "person_name": "Plomería",
+                "phone": "5599998888",
+                "default_city": "Ciudad de México",
+            },
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 303
+        account = await only_account(db)
+        assert account.phone == "5599998888", "el teléfono sí se guardó"
+        assert account.person_name == "Plomería"
+
+    async def test_a_legacy_name_still_cannot_be_replaced_by_another_bad_one(
+        self, signed_in: AsyncClient, db: AsyncSession
+    ) -> None:
+        """La tolerancia es para el dato heredado, no para escribir uno nuevo."""
+        account = await only_account(db)
+        account.person_name = "Plomería"
+        await db.commit()
+
+        await signed_in.post(
+            "/ajustes",
+            data={
+                "csrf_token": csrf_token_of(signed_in),
+                "person_name": "Electricidad",
+                "phone": "5512345678",
+                "default_city": "Ciudad de México",
+            },
+            follow_redirects=False,
+        )
+        assert (await only_account(db)).person_name == "Plomería"
 
     async def test_the_settings_alias_of_section_6_resolves(self, signed_in: AsyncClient) -> None:
         response = await signed_in.get("/settings", follow_redirects=False)

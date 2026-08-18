@@ -234,6 +234,64 @@ class TestSection81CommonStructure:
         assert "Av. Coyoacán 123, Narvarte" in text
 
 
+class TestSection81WhoHeadlinesAndWhoSigns:
+    """§8.1 imprime dos nombres, y no tienen por qué ser el mismo.
+
+    La cabecera lleva la identidad pública del emisor; el pie dice «Firma de
+    quien recibe el pago», y ahí firma una persona. Un negocio no firma.
+
+    Se comprueba con adyacencia y no con `in text`: buscar el nombre suelto no
+    distingue en cuál de las dos líneas apareció, que es exactamente lo que hay
+    que distinguir aquí.
+    """
+
+    @pytest.fixture
+    async def un_cobro(self, scope: AccountScope, account: Account, customer: Client):
+        return await charge(
+            scope,
+            account,
+            ChargeRequest(
+                client_id=customer.id,
+                concept="Fuga en cocina",
+                payment_amount_cents=50000,
+            ),
+        )
+
+    async def test_the_business_headlines_and_the_person_signs(
+        self,
+        client: AsyncClient,
+        db: AsyncSession,
+        account: Account,
+        scope: AccountScope,
+        customer: Client,
+    ) -> None:
+        account.business_name = "Plomería Sánchez"
+        await db.flush()
+        cobro = await charge(
+            scope,
+            account,
+            ChargeRequest(
+                client_id=customer.id,
+                concept="Fuga en cocina",
+                payment_amount_cents=50000,
+            ),
+        )
+        await db.commit()
+
+        text = await public_text(client, cobro.receipt)
+
+        assert re.search(r"Plomería Sánchez\s+Electricista", text), "encabeza el negocio"
+        assert re.search(r"Juan Pérez\s+Firma de quien recibe el pago", text), "firma la persona"
+
+    async def test_without_a_business_the_person_is_in_both_places(
+        self, client: AsyncClient, un_cobro
+    ) -> None:
+        text = await public_text(client, un_cobro.receipt)
+
+        assert re.search(r"Juan Pérez\s+Electricista", text)
+        assert re.search(r"Juan Pérez\s+Firma de quien recibe el pago", text)
+
+
 class TestCapturingTheClientSignature:
     @pytest.fixture
     async def cobro(self, scope: AccountScope, account: Account, customer: Client):
@@ -483,7 +541,7 @@ class TestTheIssuerSeesTheRealDocument:
         """`AC-13`, en la ruta que el hito 3 agrega."""
         from tests.factories import make_account
 
-        other = await make_account(db, display_name="Cuenta ajena")
+        other = await make_account(db, person_name="Cuenta ajena")
         other_client = await make_client(db, other, full_name="Cliente Ajeno")
         theirs = await charge(
             AccountScope(db, other.id),

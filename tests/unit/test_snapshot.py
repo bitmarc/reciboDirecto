@@ -21,6 +21,7 @@ from receipt.domain.snapshot import (
 
 ISSUER = IssuerFacts(
     display_name="Juan Pérez",
+    signer_name="Juan Pérez",
     phone="5512345678",
     occupation="Electricista",
     logo_blob_path="logos/1/v1.png",
@@ -38,12 +39,13 @@ def snapshot_of(
     payment_cents: int = 60000,
     material_cents: int = 0,
     include_logo: bool = True,
+    issuer: IssuerFacts = ISSUER,
 ) -> dict:
     return build_snapshot(
         issued_at=MOMENT,
         paid_at=MOMENT,
         city="Ciudad de México",
-        issuer=ISSUER,
+        issuer=issuer,
         client=CUSTOMER,
         service=ServiceFacts(
             code="SRV-0001",
@@ -164,5 +166,31 @@ class TestSnapshotIsSelfSufficient:
 
     def test_it_carries_a_format_version(self) -> None:
         """RN-10 impide reescribir recibos, así que el formato tiene que decir
-        qué forma tiene para poder evolucionar sin adivinar."""
-        assert snapshot_of()["version"] == 1
+        qué forma tiene para poder evolucionar sin adivinar.
+
+        La v2 agregó `issuer.signer_name`, y por eso está marcada.
+        """
+        assert snapshot_of()["version"] == 2
+
+
+class TestWhoHeadlinesAndWhoSigns:
+    """§8.1: la cabecera lleva la identidad pública; el pie, quien firma."""
+
+    def test_the_business_headlines_and_the_person_signs(self) -> None:
+        issuer = snapshot_of(
+            issuer=IssuerFacts(
+                display_name="Plomería Sánchez", signer_name="Ana Sánchez", phone="5512345678"
+            )
+        )["issuer"]
+
+        assert issuer["display_name"] == "Plomería Sánchez"
+        assert issuer["signer_name"] == "Ana Sánchez"
+
+    def test_without_a_business_both_are_the_person(self) -> None:
+        issuer = snapshot_of()["issuer"]
+        assert issuer["display_name"] == issuer["signer_name"] == "Juan Pérez"
+
+    def test_the_header_keeps_the_key_it_had_in_version_one(self) -> None:
+        """Renombrar la llave dejaría sin cabecera a todos los recibos v1, y
+        RN-10 impide reescribirlos para arreglarlo."""
+        assert "display_name" in snapshot_of()["issuer"]

@@ -12,6 +12,8 @@ sobrescrito cambiaría la imagen del recibo sin tocar una fila.
 """
 
 import io
+import re
+from copy import deepcopy
 
 import pytest
 from httpx import AsyncClient
@@ -25,7 +27,7 @@ from receipt.repositories import AccountScope
 from receipt.services.charging import ChargeRequest, charge
 from receipt.services.clients import update_client
 from receipt.services.media import store_logo, store_signature
-from tests.conftest import visible_text
+from tests.conftest import document_text, visible_text
 from tests.factories import make_account, make_client
 from tests.unit.test_images import as_data_uri
 
@@ -46,7 +48,7 @@ async def pixel_of(blobs: BlobStore, path: str) -> tuple[int, int, int, int]:
 @pytest.fixture
 async def account(db: AsyncSession) -> Account:
     return await make_account(
-        db, display_name="Juan Pérez", phone="5512345678", occupation="Electricista"
+        db, person_name="Juan Pérez", phone="5512345678", occupation="Electricista"
     )
 
 
@@ -87,10 +89,10 @@ class TestAc02TheIssuerCanChangeWithoutRewritingHistory:
         assert "5512345678" in text, "el recibo conserva el teléfono con el que se emitió"
         assert "5500000000" not in text
 
-    async def test_changing_the_display_name_does_not_alter_an_earlier_receipt(
+    async def test_registering_a_business_name_does_not_alter_an_earlier_receipt(
         self, client: AsyncClient, db: AsyncSession, account: Account, cobro
     ) -> None:
-        account.display_name = "Instalaciones Pérez S.A. de C.V."
+        account.business_name = "Instalaciones Pérez S.A. de C.V."
         await db.commit()
 
         response = await client.get(f"/r/{cobro.receipt.public_token}")
@@ -98,6 +100,38 @@ class TestAc02TheIssuerCanChangeWithoutRewritingHistory:
         text = visible_text(response)
         assert "Juan Pérez" in text
         assert "Instalaciones Pérez" not in text
+
+    async def test_changing_the_person_name_does_not_alter_an_earlier_receipt(
+        self, client: AsyncClient, db: AsyncSession, account: Account, cobro
+    ) -> None:
+        account.person_name = "Juan Pérez Hernández"
+        await db.commit()
+
+        response = await client.get(f"/r/{cobro.receipt.public_token}")
+
+        text = visible_text(response)
+        assert "Juan Pérez Hernández" not in text
+
+    async def test_a_version_one_snapshot_still_prints_its_signature_line(
+        self, client: AsyncClient, db: AsyncSession, cobro
+    ) -> None:
+        """RN-10 en su forma más literal.
+
+        Un recibo emitido con el formato anterior no trae `signer_name`, porque
+        entonces la cuenta tenía un solo nombre. No se puede reescribir, así que
+        el render tiene que saber leerlo: su firma sale de `display_name`, que es
+        exactamente lo que ese recibo imprimía en esa línea.
+        """
+        antiguo = deepcopy(cobro.receipt.snapshot)
+        antiguo["version"] = 1
+        del antiguo["issuer"]["signer_name"]
+        # Reasignar y no mutar en el sitio: SQLAlchemy no detecta el cambio
+        # dentro de una columna JSONB.
+        cobro.receipt.snapshot = antiguo
+        await db.commit()
+
+        text = document_text(await client.get(f"/r/{cobro.receipt.public_token}"))
+        assert re.search(r"Juan Pérez\s+Firma de quien recibe el pago", text)
 
     async def test_a_later_receipt_does_show_the_new_data(
         self,

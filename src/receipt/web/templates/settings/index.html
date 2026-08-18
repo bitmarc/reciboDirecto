@@ -12,8 +12,16 @@
   <form method="post" action="/ajustes">
     <input type="hidden" name="{{ csrf_field_name }}" value="{{ csrf_token }}">
 
-    <label for="display_name">Tu nombre o el de tu negocio</label>
-    <input id="display_name" name="display_name" value="{{ account.display_name }}" required>
+    {# Dos campos y no uno: la persona firma el recibo y el negocio lo encabeza
+       (§8.1). Un negocio no firma. #}
+    <label for="person_name">Tu nombre</label>
+    <input id="person_name" name="person_name" value="{{ account.person_name }}" required>
+    <p class="muted">Nombre y apellido. Es el nombre que firma tus recibos.</p>
+
+    <label for="business_name">Nombre de tu negocio <span class="muted">(opcional)</span></label>
+    <input id="business_name" name="business_name" value="{{ account.business_name or '' }}"
+           placeholder="Plomería Sánchez">
+    <p class="muted">Si lo pones, encabeza el recibo. La firma sigue siendo tu nombre.</p>
 
     <label for="occupation">Oficio <span class="muted">(opcional)</span></label>
     <input id="occupation" name="occupation" value="{{ account.occupation or '' }}"

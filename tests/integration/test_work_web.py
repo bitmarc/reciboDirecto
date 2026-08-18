@@ -109,7 +109,7 @@ class TestTheJobPage:
     ) -> None:
         from tests.factories import make_account
 
-        other = await make_account(db, display_name="Cuenta ajena")
+        other = await make_account(db, person_name="Cuenta ajena")
         other_client = await make_client(db, other, full_name="Cliente Ajeno")
         theirs = await charge(
             AccountScope(db, other.id),

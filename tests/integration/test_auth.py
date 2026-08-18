@@ -17,7 +17,7 @@ async def _register(db: AsyncSession, **overrides: str):
     payload = {
         "email": "electricista@example.mx",
         "password": "contrasena-larga",
-        "display_name": "Juan Pérez",
+        "person_name": "Juan Pérez",
         "phone": "5512345678",
         "default_city": "Ciudad de México",
     }
@@ -70,6 +70,46 @@ class TestRegistration:
     ) -> None:
         with pytest.raises(ValidationError, match="teléfono"):
             await _register(db, phone="   ")
+
+
+class TestTheIssuerNameAndTheBusinessName:
+    """§8.1: el recibo lo encabeza una identidad y lo firma una persona."""
+
+    async def test_a_person_name_without_a_surname_is_rejected(self, db: AsyncSession) -> None:
+        """Firma una persona, y un nombre de pila suelto no identifica a nadie
+        meses después, que es cuando se consulta el comprobante."""
+        with pytest.raises(ValidationError, match="apellido"):
+            await _register(db, person_name="Juan")
+
+    async def test_the_person_name_is_required(self, db: AsyncSession) -> None:
+        with pytest.raises(ValidationError, match="nombre"):
+            await _register(db, person_name="   ")
+
+    async def test_the_business_name_is_optional_and_becomes_the_public_identity(
+        self, db: AsyncSession
+    ) -> None:
+        user = await _register(db, business_name="Plomería Sánchez")
+        await db.refresh(user, ["account"])
+
+        assert user.account.person_name == "Juan Pérez", "quien firma sigue siendo la persona"
+        assert user.account.business_name == "Plomería Sánchez"
+        assert user.account.issuer_name == "Plomería Sánchez", "y es lo que encabeza el recibo"
+
+    async def test_without_a_business_the_person_is_the_public_identity(
+        self, db: AsyncSession
+    ) -> None:
+        user = await _register(db)
+        await db.refresh(user, ["account"])
+
+        assert user.account.business_name is None
+        assert user.account.issuer_name == "Juan Pérez"
+
+    async def test_a_one_word_business_name_is_fine(self, db: AsyncSession) -> None:
+        """Un negocio se puede llamar como quiera: no firma nada."""
+        user = await _register(db, business_name="Plomería")
+        await db.refresh(user, ["account"])
+
+        assert user.account.business_name == "Plomería"
 
 
 class TestAuthentication:

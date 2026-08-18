@@ -59,8 +59,50 @@ class ReceiptDocument:
         return amounts
 
     @property
+    def issuer_name(self) -> str:
+        """Lo que encabeza el comprobante (§8.1).
+
+        El negocio si lo había al emitir, si no la persona. La decisión se
+        resolvió al congelar el snapshot, no aquí: reevaluarla ahora leería la
+        cuenta viva y rompería RN-10.
+        """
+        return _issuer_text(self.snapshot, "display_name")
+
+    @property
+    def signer_name(self) -> str:
+        """Quien firma — §8.1: «Firma de quien recibe el pago».
+
+        Los recibos de `version` 1 se emitieron cuando la cuenta tenía un solo
+        nombre, así que no traen `signer_name`. Se cae de vuelta a
+        `display_name`, que es **exactamente** lo que esos recibos imprimían en
+        esta línea: RN-10 impide reescribirlos, y la única forma de que sigan
+        viéndose igual es leerlos como se escribieron.
+
+        La caída vive aquí y no en la plantilla porque Jinja está configurado
+        con `Undefined` y no con `StrictUndefined` (`web/templating.py`): una
+        llave ausente en la plantilla se renderizaría como cadena vacía, y una
+        línea de firma en blanco no la delata ni un error ni una prueba.
+        """
+        return _issuer_text(self.snapshot, "signer_name") or self.issuer_name
+
+    @property
     def is_cancelled(self) -> bool:
         return self.receipt.status.value == "cancelled"
+
+
+def _issuer_text(snapshot: dict[str, Any], key: str) -> str:
+    """Un texto del bloque `issuer`, o cadena vacía si no está o no es texto.
+
+    El snapshot es JSONB y su versión puede cambiar (`SNAPSHOT_VERSION`): se
+    comprueba la forma en lugar de confiar en ella, igual que hace
+    `services/accounting`. Un recibo viejo con una forma inesperada tiene que
+    poder seguir renderizándose; es la prueba de pago de alguien.
+    """
+    issuer = snapshot.get("issuer")
+    if not isinstance(issuer, dict):
+        return ""
+    value = issuer.get(key)
+    return value if isinstance(value, str) else ""
 
 
 async def _data_uri(blobs: BlobStore, path: str | None) -> str | None:

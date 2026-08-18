@@ -35,10 +35,11 @@ from receipt.domain.snapshot import (
 )
 from receipt.models import Account, Client, Payment, Receipt, Service, ServiceAdjustment
 from receipt.repositories import AccountScope
-from receipt.services.clients import folded, normalize_name
+from receipt.services.clients import folded
 from receipt.services.counters import allocate_folio
 from receipt.services.documents import invalidate_pdf
 from receipt.services.errors import ConflictError, ValidationError
+from receipt.services.names import normalize_name
 from receipt.services.usage import record_issuance
 from receipt.services.work import refresh_status
 
@@ -79,7 +80,11 @@ async def issue_receipt(
         paid_at=payment.paid_at,
         city=account.default_city,
         issuer=IssuerFacts(
-            display_name=account.display_name,
+            # La cabecera lleva la identidad pública y el pie a quien firma
+            # (§8.1). Son dos datos distintos desde que la cuenta separó el
+            # nombre de la persona del de su negocio.
+            display_name=account.issuer_name,
+            signer_name=account.person_name,
             phone=account.phone,
             occupation=account.occupation,
             logo_blob_path=account.logo_blob_path,

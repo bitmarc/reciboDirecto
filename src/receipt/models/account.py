@@ -23,8 +23,16 @@ from receipt.models.base import (
 class Account(Base, PrimaryKeyMixin, TimestampMixin):
     __tablename__ = "account"
 
-    display_name: Mapped[str] = mapped_column(Text)
-    """Nombre de la persona o razón social. Es lo que aparece como emisor."""
+    person_name: Mapped[str] = mapped_column(Text)
+    """Nombre de la persona que firma. Obligatorio.
+
+    §8.1 rotula el pie del recibo «Firma de quien recibe el pago», y un negocio
+    no firma: firma alguien. Por eso este dato no puede faltar aunque la cuenta
+    opere con nombre comercial.
+    """
+
+    business_name: Mapped[str | None] = mapped_column(Text)
+    """Razón social o nombre del negocio. Opcional; solo cambia la cabecera."""
 
     phone: Mapped[str] = mapped_column(Text)
     occupation: Mapped[str | None] = mapped_column(Text)
@@ -42,6 +50,17 @@ class Account(Base, PrimaryKeyMixin, TimestampMixin):
     plan_valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     users: Mapped[list["User"]] = relationship(back_populates="account")
+
+    @property
+    def issuer_name(self) -> str:
+        """Identidad pública: lo que encabeza el recibo (§8.1) y saluda el panel.
+
+        No es columna a propósito. Derivarla impide que la cabecera, el saludo y
+        el texto que se comparte se desincronicen del par de columnas que los
+        define, y deja una sola respuesta a «¿con qué nombre aparece esta
+        cuenta?». Quien firma es otro dato y se lee de `person_name`.
+        """
+        return self.business_name or self.person_name
 
 
 class User(Base, PrimaryKeyMixin, CreatedAtMixin):

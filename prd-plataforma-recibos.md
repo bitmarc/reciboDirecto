@@ -180,7 +180,8 @@ Account (1) ──< Client (N)
 | Campo | Tipo | Notas |
 |---|---|---|
 | `id` | PK | |
-| `display_name` | text | Nombre de la persona **o** razón social / nombre del negocio. Es lo que aparece como emisor en el recibo |
+| `person_name` | text | Nombre de la persona. Obligatorio, nombre + apellido. Es **quien firma**: aparece en la línea de firma del recibo (§8.1) |
+| `business_name` | text NULL | Razón social / nombre del negocio, opcional. Cuando existe, **encabeza** el recibo en lugar de `person_name` |
 | `phone` | text | Obligatorio. Aparece en el recibo |
 | `occupation` | text NULL | Opcional. Ej. "Electricista — instalaciones residenciales" |
 | `logo_blob_path` | text NULL | Solo utilizable en plan de pago (`RN-32`) |
@@ -310,6 +311,7 @@ Cuando se emite un recibo, se congela en `snapshot` (jsonb) **todo** lo necesari
   "city": "Ciudad de México",
   "issuer": {
     "display_name": "…",
+    "signer_name": "…",
     "phone": "…",
     "occupation": "…",
     "logo_blob_path": "…",
@@ -336,6 +338,8 @@ Cuando se emite un recibo, se congela en `snapshot` (jsonb) **todo** lo necesari
   "method": "cash"
 }
 ```
+
+`issuer.display_name` es la **identidad pública** que encabeza el comprobante —el nombre del negocio si el emisor registró uno, si no el suyo— y `issuer.signer_name` es la **persona que firma**. La llave `display_name` conserva su nombre desde la v1 del formato aunque ya no calque el nombre de la columna: `RN-10` impide reescribir un recibo emitido, así que renombrarla dejaría sin cabecera a todos los anteriores. Los recibos emitidos antes de que existiera `signer_name` no la traen y su línea de firma se lee de `display_name`, que es lo que esos recibos imprimían.
 
 **Regla:** la página pública y el PDF se renderizan **exclusivamente desde el `snapshot`**, nunca desde las tablas vivas. Si mañana el emisor cambia su logo, su teléfono o el nombre del cliente, los recibos ya emitidos **no cambian**. Esto es lo único que sostiene su valor como prueba.
 
@@ -399,7 +403,7 @@ POST   /auth/reset-password
 
 ```
 GET    /settings
-PATCH  /settings                  display_name, phone, occupation, default_city
+PATCH  /settings                  person_name, business_name, phone, occupation, default_city
 PUT    /settings/signature        PNG de la firma del emisor
 PUT    /settings/logo             solo plan de pago
 ```
@@ -556,13 +560,13 @@ Una sola implementación HTML+CSS que sirve a página pública, PDF e impresión
 
 ### 8.1 Estructura común
 
-**Cabecera:** logo (si aplica), nombre o razón social del emisor, oficio (si existe), teléfono. A la derecha: **ciudad y fecha de emisión** ("Ciudad de México, 7 de julio de 2026").
+**Cabecera:** logo (si aplica), identidad del emisor —el nombre de su negocio si registró uno, si no el suyo—, oficio (si existe), teléfono. A la derecha: **ciudad y fecha de emisión** ("Ciudad de México, 7 de julio de 2026").
 
 **Identificación:** folio del recibo y código del servicio.
 
 **Cuerpo:** "Recibí de {nombre del cliente}", concepto del trabajo, y la ubicación del punto de trabajo (alias y/o dirección) cuando exista.
 
-**Pie:** firma del emisor (siempre), firma del cliente (si se solicitó, con fecha y hora), y la leyenda legal:
+**Pie:** firma del emisor (siempre), rotulada con el **nombre de la persona** (`person_name`) y nunca con el del negocio —un negocio no firma—; firma del cliente (si se solicitó, con fecha y hora), y la leyenda legal:
 
 > _Comprobante interno sin efectos fiscales. No es un CFDI ni sustituye a uno._
 

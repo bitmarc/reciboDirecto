@@ -70,7 +70,8 @@ DEL_EMISOR: tuple[Categoria, ...] = (
             "poder devolverte el acceso si olvidas la contraseña."
         ),
         datos=(
-            "Nombre o razón social",
+            "Tu nombre y apellido",
+            "El nombre de tu negocio, si capturas uno",
             "Correo electrónico",
             "Teléfono",
             "Ciudad",
@@ -79,7 +80,8 @@ DEL_EMISOR: tuple[Categoria, ...] = (
         ),
         columnas=frozenset(
             {
-                "account.display_name",
+                "account.person_name",
+                "account.business_name",
                 "account.phone",
                 "account.occupation",
                 "account.default_city",

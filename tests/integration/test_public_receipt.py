@@ -164,7 +164,7 @@ class TestAc12AnInvalidTokenLeaksNothing:
         `AC-13` acota lo que se lee **con sesión**; aquí no hay sesión, y un
         recibo que solo abriera su propio emisor no serviría para nada.
         """
-        other = await make_account(db, display_name="Otro Emisor")
+        other = await make_account(db, person_name="Otro Emisor")
         other_client = await make_client(db, other, full_name="Luis Mendoza")
         theirs = await charge(
             AccountScope(db, other.id),

@@ -82,8 +82,8 @@ class TestSignatureVersioning:
     async def test_two_accounts_never_share_a_path(
         self, db: AsyncSession, blobs: BlobStore
     ) -> None:
-        account_a = await make_account(db, display_name="Cuenta A")
-        account_b = await make_account(db, display_name="Cuenta B")
+        account_a = await make_account(db, person_name="Cuenta A")
+        account_b = await make_account(db, person_name="Cuenta B")
 
         path_a = await store_signature(db, blobs, account_a, data_uri=signature_of((10, 0, 0, 255)))
         path_b = await store_signature(db, blobs, account_b, data_uri=signature_of((10, 0, 0, 255)))

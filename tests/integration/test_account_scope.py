@@ -29,8 +29,8 @@ _PATH_PARAM = re.compile(r"\{(\w+)\}")
 
 
 async def test_a_client_of_another_account_is_invisible(db: AsyncSession) -> None:
-    account_a = await make_account(db, display_name="Cuenta A")
-    account_b = await make_account(db, display_name="Cuenta B")
+    account_a = await make_account(db, person_name="Cuenta A")
+    account_b = await make_account(db, person_name="Cuenta B")
     client_b = await make_client(db, account_b, full_name="Cliente De B")
 
     scope_a = AccountScope(db, account_a.id)
@@ -46,8 +46,8 @@ async def test_a_payment_of_another_account_is_invisible_through_its_service(
 
     Es el caso donde un filtro escrito a mano se olvida con más facilidad.
     """
-    account_a = await make_account(db, display_name="Cuenta A")
-    account_b = await make_account(db, display_name="Cuenta B")
+    account_a = await make_account(db, person_name="Cuenta A")
+    account_b = await make_account(db, person_name="Cuenta B")
     client_b = await make_client(db, account_b)
     service_b = await make_service(db, account_b, client_b)
     payment_b = await make_payment(db, service_b)
@@ -139,7 +139,7 @@ def test_the_sweep_actually_finds_routes_to_check() -> None:
 async def test_ac13_no_route_exposes_a_resource_of_another_account(
     signed_in: AsyncClient, db: AsyncSession, path: str
 ) -> None:
-    other = await make_account(db, display_name="Cuenta ajena")
+    other = await make_account(db, person_name="Cuenta ajena")
     foreign = await make_client(db, other, full_name="Cliente Ajeno", phone="5500000000")
 
     param = _PATH_PARAM.search(path)
