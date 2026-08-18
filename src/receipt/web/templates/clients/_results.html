@@ -31,7 +31,11 @@
     {% endfor %}
   </ul>
 {% elif q %}
-  <p class="empty">
+  {# Resaltado, no apagado: aquí el emisor está detenido —no puede cobrarle a
+     alguien que no aparece— y la salida es el enlace de esta misma caja. En
+     ámbar y no en rojo, porque que un cliente todavía no esté dado de alta es
+     el caso normal la primera vez, no un error suyo. #}
+  <p class="empty empty--action">
     Nadie coincide con «{{ q }}».
     {% if picker %}
       {# En cobro no se sale de la pantalla: el alta son dos campos de este

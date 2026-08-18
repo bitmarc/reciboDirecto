@@ -52,8 +52,20 @@
     <input type="hidden" name="client_id" data-cliente-id value="{{ values.client_id or '' }}">
 
     {# Alta en la misma pantalla, sin salir de ella (§7.2). Dos campos: el
-       recibo dice "Recibí de {cliente}" y necesita nombre y apellido. #}
-    <div data-cliente-alta hidden>
+       recibo dice "Recibí de {cliente}" y necesita nombre y apellido.
+
+       Van encerrados y con título porque aparecen a mitad del formulario de
+       cobro: sueltos se leen como dos campos más del cobro, cuando en realidad
+       son de otra cosa —el alta de alguien que todavía no existe— que ocurre
+       dentro de la misma transacción (§6). Los dos son obligatorios
+       (`services/clients.py`), y decirlo aquí evita que el emisor descubra el
+       teléfono faltante hasta después de tocar «Generar recibo». #}
+    <div class="subpanel" data-cliente-alta hidden>
+      <h3 class="subpanel__title">Cliente nuevo</h3>
+      <p class="subpanel__hint">
+        Se da de alta al generar el recibo. Los dos campos son obligatorios.
+      </p>
+
       <label for="new_client_name">Nombre y apellido</label>
       <input id="new_client_name" name="new_client_name" type="text"
              placeholder="Ana Ramírez" value="{{ values.new_client_name or '' }}">
