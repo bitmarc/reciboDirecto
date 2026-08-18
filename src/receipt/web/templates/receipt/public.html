@@ -17,26 +17,38 @@
   <title>Recibo {{ doc.receipt.folio }} — {{ doc.snapshot.issuer.display_name }}</title>
   {% include "receipt/_styles.html" %}
   <style>
+    /* Esta hoja la pinta solo el navegador: el PDF y la vista de impresión salen
+       de `receipt/pdf.html`, así que aquí sí caben flexbox y sombras. Lo único
+       que se estiliza es el cromo alrededor del documento; el documento mismo lo
+       define `receipt/_styles.html` y no se toca (§3.2). */
     body {
       margin: 0;
       padding: 4mm 3mm 12mm;
-      background: #eef1f5;
+      background: #eff2f6;
       font-family: "Helvetica Neue", Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
     }
     .rc-page { max-width: 200mm; margin: 0 auto; }
-    .receipt { box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12); }
-    .rc-actions { max-width: 200mm; margin: 5mm auto 0; text-align: center; }
+    /* La hoja se levanta del fondo: se lee como un papel, no como un bloque. */
+    .receipt {
+      box-shadow: 0 8px 24px -8px rgba(16, 24, 40, 0.18), 0 1px 3px rgba(16, 24, 40, 0.08);
+      border-radius: 4px;
+    }
+    .rc-actions { max-width: 200mm; margin: 6mm auto 0; text-align: center; }
     .rc-download {
-      display: block;
-      padding: 1rem;
-      background: #16181d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem 1.25rem;
+      background: #0b6b3a;
       color: #fff;
       text-decoration: none;
       font-size: 1.0625rem;
       font-weight: 600;
-      border-radius: 8px;
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
       /* Objetivo grande: se abre desde un celular, en la calle. */
-      min-height: 3rem;
+      min-height: 3.25rem;
     }
     .rc-keep {
       margin: 4mm auto 0;
@@ -56,7 +68,7 @@
     .rc-privacidad a { color: inherit; }
     @media print {
       body { background: #fff; padding: 0; }
-      .receipt { box-shadow: none; }
+      .receipt { box-shadow: none; border-radius: 0; }
     }
   </style>
 </head>

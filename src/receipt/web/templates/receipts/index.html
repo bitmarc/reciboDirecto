@@ -16,9 +16,9 @@
   </form>
 
   <nav class="filters">
-    <a href="/recibos?q={{ q }}" class="tag {% if not estado %}tag--ok{% endif %}">Todos</a>
-    <a href="/recibos?q={{ q }}&estado=issued" class="tag {% if estado == 'issued' %}tag--ok{% endif %}">Emitidos</a>
-    <a href="/recibos?q={{ q }}&estado=cancelled" class="tag {% if estado == 'cancelled' %}tag--ok{% endif %}">Cancelados</a>
+    <a href="/recibos?q={{ q }}" class="chip {% if not estado %}chip--active{% endif %}">Todos</a>
+    <a href="/recibos?q={{ q }}&estado=issued" class="chip {% if estado == 'issued' %}chip--active{% endif %}">Emitidos</a>
+    <a href="/recibos?q={{ q }}&estado=cancelled" class="chip {% if estado == 'cancelled' %}chip--active{% endif %}">Cancelados</a>
   </nav>
 </section>
 

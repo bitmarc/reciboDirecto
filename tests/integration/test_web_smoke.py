@@ -16,19 +16,39 @@ async def test_health_check_responds(client: AsyncClient) -> None:
     assert response.status_code == 200
 
 
-async def test_the_dashboard_redirects_to_login_without_a_session(
+async def test_the_root_welcomes_a_visitor_without_a_session(client: AsyncClient) -> None:
+    """§1.4: quien llega de fuera necesita saber qué es esto antes de dar su correo.
+
+    `/` tiene dos públicos. Sin sesión sirve la bienvenida; el panel de §7.4 vive
+    detrás de la cookie y se comprueba en `test_accounting`.
+    """
+    response = await client.get("/", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert "Crear cuenta gratis" in response.text
+    # La bienvenida no puede filtrar el menú del emisor.
+    assert 'href="/cobrar"' not in response.text
+
+
+async def test_a_private_screen_redirects_to_login_without_a_session(
     client: AsyncClient,
 ) -> None:
-    response = await client.get("/", follow_redirects=False)
+    response = await client.get("/cobrar", follow_redirects=False)
     assert response.status_code == 303
-    assert response.headers["location"] == "/entrar"
+    assert response.headers["location"] == "/entrar?next=/cobrar"
 
 
 async def test_a_forged_session_cookie_is_rejected(client: AsyncClient) -> None:
-    """La cookie va firmada: un valor inventado no da acceso."""
+    """La cookie va firmada: un valor inventado no da acceso.
+
+    Se comprueba sobre una ruta privada y no sobre `/`, que desde la bienvenida
+    responde 200 a cualquiera y ya no distinguiría una cookie falsa de la
+    ausencia de cookie.
+    """
     client.cookies.set("receipt_session", "eyJ1IjoxLCJhIjoxLCJjIjoieCJ9.falsa.firma")
-    response = await client.get("/", follow_redirects=False)
+    response = await client.get("/ajustes", follow_redirects=False)
     assert response.status_code == 303
+    assert response.headers["location"].startswith("/entrar")
 
 
 async def test_registration_and_login_complete_the_round_trip(client: AsyncClient) -> None:

@@ -13,12 +13,12 @@
 <section class="card">
   <nav class="filters">
     {% if not earliest_period or report.previous_period >= earliest_period %}
-      <a class="tag" href="/reportes?periodo={{ report.previous_period }}">
+      <a class="chip" href="/reportes?periodo={{ report.previous_period }}">
         ← {{ report.previous_period | mes }}
       </a>
     {% endif %}
     {% if report.next_period %}
-      <a class="tag" href="/reportes?periodo={{ report.next_period }}">
+      <a class="chip" href="/reportes?periodo={{ report.next_period }}">
         {{ report.next_period | mes }} →
       </a>
     {% endif %}

@@ -1,4 +1,4 @@
-"""Panel del emisor y alias de la superficie en inglés (§6, §7.4).
+"""Panel del emisor, bienvenida pública y alias de la superficie en inglés (§6, §7.4).
 
 Las rutas visibles van en español porque son lo que el emisor ve en la barra de
 direcciones y §0 exige que todo lo visible esté en español de México. La
@@ -19,9 +19,12 @@ from starlette.responses import Response
 
 from receipt.domain.accounting import SERIES_MONTHS
 from receipt.domain.clock import current_period
+from receipt.models import Account
+from receipt.repositories import AccountScope
+from receipt.security.sessions import read_session
 from receipt.services.accounting import overview
 from receipt.services.plans import allowance_of, entitlements, visible_periods
-from receipt.web.dependencies import CurrentAccount, DbSession, Scope
+from receipt.web.dependencies import DbSession, NotAuthenticated
 from receipt.web.templating import render
 
 router = APIRouter(tags=["pages"])
@@ -39,9 +42,25 @@ _API_ALIASES = {
 
 
 @router.get("/")
-async def dashboard(
-    request: Request, scope: Scope, db: DbSession, account: CurrentAccount
-) -> Response:
+async def home(request: Request, db: DbSession) -> Response:
+    """Bienvenida para quien llega de fuera; panel para quien ya entró.
+
+    Es la única pantalla con dos públicos, y por eso se bifurca a mano en lugar
+    de declarar `CurrentAccount`: con la dependencia, quien abría una liga
+    compartida aterrizaba en un campo de contraseña sin haber sabido nunca qué
+    es esto (§1.4). Detrás de la sesión, el panel de §7.4 no cambia en nada.
+    """
+    session = read_session(request)
+    if session is None:
+        return render(request, "landing.html")
+
+    scope = AccountScope(db, session.account_id)
+    account = await scope.get(Account, session.account_id)
+    if account is None:
+        # Cookie firmada contra una cuenta que ya no existe. Mismo trato que da
+        # `get_current_account`: de vuelta al login, no a la bienvenida.
+        raise NotAuthenticated
+
     rights = entitlements(account)
     current = current_period()
     return render(

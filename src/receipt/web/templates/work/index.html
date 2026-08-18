@@ -9,10 +9,10 @@
 {# Los trabajos no se dan de alta aquí: nacen con el primer pago (RN-15). #}
 <section class="card">
   <nav class="filters">
-    <a href="/trabajos" class="tag {% if not estado %}tag--ok{% endif %}">Todos</a>
-    <a href="/trabajos?estado=open" class="tag {% if estado == 'open' %}tag--ok{% endif %}">Abiertos</a>
-    <a href="/trabajos?estado=settled" class="tag {% if estado == 'settled' %}tag--ok{% endif %}">Liquidados</a>
-    <a href="/trabajos?estado=closed_uncollected" class="tag {% if estado == 'closed_uncollected' %}tag--ok{% endif %}">No cobrados</a>
+    <a href="/trabajos" class="chip {% if not estado %}chip--active{% endif %}">Todos</a>
+    <a href="/trabajos?estado=open" class="chip {% if estado == 'open' %}chip--active{% endif %}">Abiertos</a>
+    <a href="/trabajos?estado=settled" class="chip {% if estado == 'settled' %}chip--active{% endif %}">Liquidados</a>
+    <a href="/trabajos?estado=closed_uncollected" class="chip {% if estado == 'closed_uncollected' %}chip--active{% endif %}">No cobrados</a>
   </nav>
 </section>
 
