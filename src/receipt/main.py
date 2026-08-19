@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import Response
 
+from receipt.branding import APP_NAME
 from receipt.config import get_settings
 from receipt.db import dispose_engine
 from receipt.logging_config import configure_logging
@@ -41,7 +42,7 @@ def create_app() -> FastAPI:
     configure_logging(debug=settings.debug)
 
     app = FastAPI(
-        title="Recibo",
+        title=APP_NAME,
         description="Comprobantes de pago no fiscales",
         version="0.1.0",
         lifespan=lifespan,

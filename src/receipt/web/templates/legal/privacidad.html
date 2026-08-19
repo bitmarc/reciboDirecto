@@ -10,7 +10,7 @@
    frase necesita saber cómo está hecho el producto para entenderse, está mal
    escrita. #}
 {% extends "base.html" %}
-{% block title %}Aviso de privacidad — Recibo{% endblock %}
+{% block title %}Aviso de privacidad — {{ app_name }}{% endblock %}
 
 {# Fuera de producción la identidad puede venir vacía, y un `mailto:` sin
    dirección es una liga rota. Se degrada a texto en vez de fingir un enlace. #}
@@ -41,7 +41,9 @@
     <strong>{{ identidad.responsable or "—" }}</strong>, con domicilio en
     {{ identidad.domicilio or "—" }}, es responsable del tratamiento de tus datos
     personales y del uso que se les dé. En este documento nos referimos a ese
-    responsable como «Recibo» o «nosotros».
+    {# Va literal y no interpolado con `app_name`: es texto legal publicado, y su
+       redacción no debe reescribirse sola si algún día cambia la constante. #}
+    responsable como «ReciboDirecto» o «nosotros».
   </p>
 
   <h2>2. Hay dos relaciones distintas, y conviene no confundirlas</h2>

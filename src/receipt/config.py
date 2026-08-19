@@ -6,6 +6,8 @@ from typing import Literal
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from receipt.branding import APP_NAME
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -34,7 +36,7 @@ class Settings(BaseSettings):
     # Solo lo usa `ConsoleMailer`, para que el volcado del log se lea bien. El
     # remitente real de Azure va en `acs_sender_address`, que es una dirección
     # pelada: el nombre visible se configura en el portal, en el dominio.
-    mail_from: str = "Recibo <no-responder@recibo.mx>"
+    mail_from: str = f"{APP_NAME} <no-responder@recibo.mx>"
 
     # Secretos de Communication Services. Vacíos salvo con `mail_backend=azure`,
     # donde el validador de abajo los exige.

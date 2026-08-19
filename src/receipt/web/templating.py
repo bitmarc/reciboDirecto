@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 from starlette.responses import Response
 
+from receipt.branding import APP_NAME
 from receipt.domain.clock import (
     format_age_es,
     format_datetime_es,
@@ -29,6 +30,10 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.globals["csrf_field_name"] = CSRF_FIELD_NAME
+
+# La marca, para que ninguna plantilla la escriba a mano. Son veinte títulos de
+# pestaña más el wordmark: repetida, un cambio de nombre deja pantallas atrás.
+templates.env.globals["app_name"] = APP_NAME
 
 # Etiquetas del dominio, disponibles en toda plantilla sin pasarlas por contexto.
 templates.env.globals["estado_trabajo"] = labels.SERVICE_STATUS

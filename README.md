@@ -1,4 +1,4 @@
-# Recibo — plataforma de comprobantes de pago no fiscales
+# ReciboDirecto — plataforma de comprobantes de pago no fiscales
 
 Aplicación web para que un prestador de servicios **genere, entregue y conserve
 comprobantes de pago no fiscales**, y lleve el control de lo cobrado y lo

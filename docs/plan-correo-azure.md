@@ -201,7 +201,7 @@ repartir sería pagar mucho por información que el emisor no puede usar.
 
 `senderAddress` en el SDK es una dirección pelada. El nombre que ve el
 destinatario se configura en el portal, en el *sender username* del dominio.
-`MAIL_FROM` (`Recibo <no-responder@recibo.mx>`) se queda como está para que
+`MAIL_FROM` (`ReciboDirecto <no-responder@recibo.mx>`) se queda como está para que
 `ConsoleMailer` siga siendo legible en local, y la dirección de Azure viaja en
 un ajuste propio.
 
@@ -307,7 +307,7 @@ Dos detalles que ya están resueltos y conviene no romper:
 ```python
 # config.py
 mail_backend: Literal["console", "memory", "azure"] = "console"
-mail_from: str = "Recibo <no-responder@recibo.mx>"
+mail_from: str = f"{APP_NAME} <no-responder@recibo.mx>"
 
 acs_connection_string: str = ""
 acs_sender_address: str = ""

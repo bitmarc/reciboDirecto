@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from receipt.branding import APP_NAME
 from receipt.domain.enums import SignerCapacity
 from receipt.infra.blob import BlobStore
 from receipt.models import Account, Client
@@ -351,3 +352,32 @@ class TestTheThreeDestinationsShareOneTemplate:
     async def test_the_print_view_drops_the_page_chrome(self, client: AsyncClient, cobro) -> None:
         printable = await client.get(f"/r/{cobro.receipt.public_token}/imprimir")
         assert "Descargar PDF" not in visible_text(printable)
+
+
+class TestTheBrandStopsAtThisPage:
+    """«Recibo» es la palabra que nombra el documento; `APP_NAME` es el producto.
+
+    Las dos viven en la misma pantalla y confundirlas la estropea en direcciones
+    opuestas: poner la marca aquí contradice §1.5, y arrastrar el comprobante
+    detrás de un cambio de nombre lo dejaría diciendo algo que no es.
+    """
+
+    async def test_the_public_page_never_names_the_product(
+        self, client: AsyncClient, cobro
+    ) -> None:
+        """§1.5 y §7.3: el cliente del emisor no tiene cuenta y nada aquí debe
+        sugerirle que la tenga. Por eso esta página no extiende `base.html` y no
+        hereda ni la barra ni el título de la aplicación."""
+        response = await client.get(f"/r/{cobro.receipt.public_token}")
+
+        assert APP_NAME not in response.text
+
+    async def test_the_document_still_calls_itself_a_receipt(
+        self, client: AsyncClient, cobro
+    ) -> None:
+        """El comprobante se llama recibo porque eso es, no porque así se llame
+        el producto. No sigue a la marca."""
+        text = visible_text(await client.get(f"/r/{cobro.receipt.public_token}"))
+
+        assert "Recibo de pago" in text
+        assert "Recibí de" in text

@@ -3,9 +3,12 @@
 El fixture `client` vive en `conftest.py` y lo comparten todas las pruebas web.
 """
 
+import re
+
 import pytest
 from httpx import AsyncClient
 
+from receipt.branding import APP_NAME
 from receipt.security.headers import PUBLIC_RECEIPT_PREFIX
 
 pytestmark = pytest.mark.db
@@ -105,6 +108,28 @@ async def test_login_does_not_redirect_to_an_external_site(client: AsyncClient) 
         follow_redirects=False,
     )
     assert response.headers["location"] == "/"
+
+
+class TestLaMarca:
+    """El nombre del producto sale de `branding.APP_NAME`, no de cada plantilla.
+
+    Sin esto, un cambio de nombre puede dejar media app con el anterior y la suite
+    no se entera: son veinte títulos de pestaña más el wordmark.
+    """
+
+    async def test_the_shell_carries_the_brand(self, client: AsyncClient) -> None:
+        response = await client.get("/entrar")
+
+        assert f"<title>Entrar — {APP_NAME}</title>" in response.text, "la pestaña"
+
+        marca = re.search(r'<a class="topbar__brand".*?</a>', response.text, re.DOTALL)
+        assert marca and APP_NAME in marca.group(), "el nombre en la barra"
+
+    async def test_the_welcome_page_leads_with_the_brand(self, client: AsyncClient) -> None:
+        """La bienvenida es la única pantalla donde el nombre va delante."""
+        response = await client.get("/")
+
+        assert f"<title>{APP_NAME} —" in response.text
 
 
 class TestSecurityHeaders:

@@ -12,6 +12,7 @@ from datetime import timedelta
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from receipt.branding import APP_NAME
 from receipt.config import get_settings
 from receipt.domain.clock import now_utc
 from receipt.domain.enums import AuthTokenPurpose
@@ -94,7 +95,7 @@ async def send_password_reset(session: AsyncSession, mailer: Mailer, user: User)
     await mailer.send(
         Message(
             to=user.email,
-            subject="Restablece tu contraseña de Recibo",
+            subject=f"Restablece tu contraseña de {APP_NAME}",
             body=(
                 "Recibimos una solicitud para cambiar tu contraseña.\n\n"
                 f"Entra aquí para elegir una nueva: {link}\n\n"
@@ -119,12 +120,12 @@ async def send_email_verification(session: AsyncSession, mailer: Mailer, user: U
     await mailer.send(
         Message(
             to=user.email,
-            subject="Confirma tu correo en Recibo",
+            subject=f"Confirma tu correo en {APP_NAME}",
             body=(
                 "Confirma tu correo para que podamos ayudarte a recuperar tu "
                 "cuenta si olvidas la contraseña.\n\n"
                 f"{link}\n\n"
-                "Puedes seguir usando Recibo mientras tanto."
+                f"Puedes seguir usando {APP_NAME} mientras tanto."
             ),
         )
     )

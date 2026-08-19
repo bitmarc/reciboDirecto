@@ -7,7 +7,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
-  <title>{% block title %}Recibo{% endblock %}</title>
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/app.css">
   {% block head %}{% endblock %}
 </head>
@@ -31,7 +31,7 @@
                   stroke-linecap="round"/>
           </svg>
         </span>
-        Recibo
+        {{ app_name }}
       </a>
 
       {% if is_authenticated %}

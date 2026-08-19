@@ -1,6 +1,6 @@
 # PRD — Plataforma de comprobantes de pago no fiscales
 
-**Nombre de trabajo:** Recibo (provisional)
+**Nombre del producto:** ReciboDirecto
 **Versión:** 1.0 — 7 de agosto de 2026
 **Autor:** producto definido por entrevista de proceso previa
 **Destinatario de este documento:** Claude Code / agente de desarrollo

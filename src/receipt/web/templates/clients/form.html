@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set editing = client is not none %}
-{% block title %}{% if editing %}Editar cliente{% else %}Nuevo cliente{% endif %} — Recibo{% endblock %}
+{% block title %}{% if editing %}Editar cliente{% else %}Nuevo cliente{% endif %} — {{ app_name }}{% endblock %}
 
 {% block content %}
 <section class="card card--narrow">

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ receipt.folio }} — Recibo{% endblock %}
+{% block title %}{{ receipt.folio }} — {{ app_name }}{% endblock %}
 
 {# Vista del emisor. El comprobante se renderiza con LA plantilla —la misma que
    sirven la página pública y el PDF (§3.2)—, así que lo que el emisor revisa

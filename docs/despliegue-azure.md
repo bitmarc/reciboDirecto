@@ -383,7 +383,7 @@ az webapp config appsettings set -g $RG -n $APP --settings \
   BLOB_CONTAINER=receipts \
   PUBLIC_BASE_URL="https://$APP.azurewebsites.net" \
   MAIL_BACKEND=console \
-  MAIL_FROM="Recibo <no-responder@recibo.mx>"
+  MAIL_FROM="ReciboDirecto <no-responder@recibo.mx>"
 ```
 
 Qué hace cada una y por qué importa:
@@ -752,7 +752,7 @@ corriendo ni se puede volver atrás cambiando una línea.
 | `BLOB_CONTAINER` | no | `receipts` |
 | `PUBLIC_BASE_URL` | sí en la práctica | `https://<app>.azurewebsites.net` |
 | `MAIL_BACKEND` | no | `console` en la demo; `azure` envía de verdad |
-| `MAIL_FROM` | no | `Recibo <no-responder@recibo.mx>` — solo lo usa `console` |
+| `MAIL_FROM` | no | `ReciboDirecto <no-responder@recibo.mx>` — solo lo usa `console` |
 | `ACS_CONNECTION_STRING` | **sí con `azure`** | `endpoint=https://…;accesskey=…` |
 | `ACS_SENDER_ADDRESS` | **sí con `azure`** | `DoNotReply@<guid>.azurecomm.net` |
 | `LEGAL_RESPONSABLE` | **sí en producción** | Nombre o razón social |
